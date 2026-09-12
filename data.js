@@ -84,3 +84,40 @@ function minexFindSourceDoc(metricKey, year){
   const candidates = MINEX_DATA.documents.filter(d => d.year === year && d.topics.some(t => t.includes(topic) || topic.includes(t)));
   return candidates[0] || MINEX_DATA.documents.find(d => d.year === year) || MINEX_DATA.documents[0];
 }
+
+/* ==========================================================================
+   Deterministic derived data — word cloud / topic counts and MINEX Impact
+   benchmarks. Nothing here is random; every number is computed once from
+   MINEX_DATA.documents / MINEX_DATA.historical above, so it changes only
+   when the underlying dataset changes (e.g. a new document is ingested).
+   ========================================================================== */
+
+function minexTopicCounts(){
+  const counts = {};
+  MINEX_DATA.documents.forEach(doc=>{
+    doc.topics.forEach(t=>{ counts[t] = (counts[t]||0) + 1; });
+  });
+  return Object.entries(counts)
+    .map(([topic,count])=>({topic,count}))
+    .sort((a,b)=>b.count-a.count);
+}
+
+/* Prototype benchmarks for the Command Center "MINEX Impact" section.
+   Each is either a real calculation over the dataset (labelled Prototype
+   Benchmark) or explicitly marked "Benchmark pending" when there is no
+   dataset-backed way to measure it in this prototype — never invented. */
+function minexImpactBenchmarks(){
+  const docs = MINEX_DATA.documents;
+  const avgConfidence = (docs.reduce((s,d)=>s+d.confidence,0)/docs.length).toFixed(1);
+  const verifiedShare = ((docs.filter(d=>d.status==="verified").length/docs.length)*100).toFixed(0);
+  const totalRecords = docs.reduce((s,d)=>s+d.records,0);
+  const conflictsResolvable = MINEX_DATA.conflicts.length;
+  return [
+    { label:"Average extraction confidence", value:avgConfidence+"%", note:"Prototype Benchmark", basis:"Mean of extraction confidence across all "+docs.length+" indexed documents." },
+    { label:"Verified document coverage", value:verifiedShare+"%", note:"Prototype Benchmark", basis:"Share of documents currently marked Verified in the repository." },
+    { label:"Records made searchable", value:totalRecords.toLocaleString(), note:"Prototype Benchmark", basis:"Sum of structured records extracted across all documents." },
+    { label:"Conflicts surfaced for review", value:conflictsResolvable, note:"Prototype Benchmark", basis:"Cross-source figures MINEX flagged instead of silently picking one." },
+    { label:"Report preparation time saved", value:"—", note:"Benchmark pending", basis:"Requires a measured baseline against manual report preparation, not yet available in this prototype." },
+    { label:"Query response time", value:"—", note:"Benchmark pending", basis:"Requires production-scale timing data, not available from this static demo dataset." }
+  ];
+}

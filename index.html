@@ -16,65 +16,71 @@
     <div class="auth-brand">
       <div class="brand-mark"></div>
       <div class="auth-brand-name">MINEX</div>
-      <div class="auth-brand-sub">Mining Intelligence &amp; Reporting Assistant</div>
+      <div class="auth-brand-sub" data-i18n="brand_sub">Mining Intelligence &amp; Reporting Assistant</div>
+    </div>
+
+    <div class="lang-select-row" aria-label="Choose your language">
+      <button class="lang-btn" data-set-lang="en">English</button>
+      <button class="lang-btn" data-set-lang="hi">हिंदी</button>
+      <button class="lang-btn" data-set-lang="mr">मराठी</button>
     </div>
 
     <div class="auth-tabs">
-      <button class="auth-tab on" data-tab="login" id="tabLogin">Log in</button>
-      <button class="auth-tab" data-tab="signup" id="tabSignup">Sign up</button>
+      <button class="auth-tab on" data-tab="login" id="tabLogin" data-i18n="login_tab">Log in</button>
+      <button class="auth-tab" data-tab="signup" id="tabSignup" data-i18n="signup_tab">Sign up</button>
     </div>
 
     <form id="loginForm" class="auth-form">
       <div class="field">
-        <label for="loginEmail">Work email</label>
+        <label for="loginEmail" data-i18n="work_email">Work email</label>
         <input id="loginEmail" type="email" placeholder="you@cmpdi.gov.in" required>
       </div>
       <div class="field">
-        <label for="loginPassword">Password</label>
+        <label for="loginPassword" data-i18n="password">Password</label>
         <div class="field-password">
           <input id="loginPassword" type="password" placeholder="Enter your password" required>
           <button type="button" class="pwd-toggle" data-target="loginPassword">Show</button>
         </div>
       </div>
       <div class="auth-row">
-        <label class="checkbox-row"><input type="checkbox" checked> Remember me</label>
-        <a href="#" id="forgotLink">Forgot password?</a>
+        <label class="checkbox-row"><input type="checkbox" checked> <span data-i18n="remember_me">Remember me</span></label>
+        <a href="#" id="forgotLink" data-i18n="forgot_password">Forgot password?</a>
       </div>
-      <button type="submit" class="btn btn-primary auth-submit">Log in</button>
+      <button type="submit" class="btn btn-primary auth-submit" data-i18n="login_btn">Log in</button>
     </form>
 
     <form id="signupForm" class="auth-form" hidden>
       <div class="field">
-        <label for="suName">Full name</label>
+        <label for="suName" data-i18n="full_name">Full name</label>
         <input id="suName" type="text" placeholder="Your name" required>
       </div>
       <div class="field">
-        <label for="suEmail">Work email</label>
+        <label for="suEmail" data-i18n="work_email">Work email</label>
         <input id="suEmail" type="email" placeholder="you@cmpdi.gov.in" required>
       </div>
       <div class="field">
-        <label for="suOrg">Organization</label>
+        <label for="suOrg" data-i18n="organization">Organization</label>
         <input id="suOrg" type="text" placeholder="e.g. CMPDI, BCCL, MCL" required>
       </div>
       <div class="field">
-        <label for="suPassword">Password</label>
+        <label for="suPassword" data-i18n="password">Password</label>
         <div class="field-password">
           <input id="suPassword" type="password" placeholder="Create a password" required>
           <button type="button" class="pwd-toggle" data-target="suPassword">Show</button>
         </div>
       </div>
       <div class="field">
-        <label for="suConfirm">Confirm password</label>
+        <label for="suConfirm" data-i18n="confirm_password">Confirm password</label>
         <input id="suConfirm" type="password" placeholder="Re-enter password" required>
       </div>
-      <button type="submit" class="btn btn-primary auth-submit">Create account</button>
+      <button type="submit" class="btn btn-primary auth-submit" data-i18n="create_account_btn">Create account</button>
     </form>
 
     <div id="authLoading" class="auth-loading" hidden>
       <div class="spinner"></div><span id="authLoadingText">Signing in…</span>
     </div>
 
-    <div class="auth-divider">or continue with</div>
+    <div class="auth-divider" data-i18n="or_continue_with">or continue with</div>
 
     <button id="googleBtn" class="btn google-btn">
       <svg class="google-g" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
@@ -83,14 +89,14 @@
         <path fill="#FBBC05" d="M10.2 19.2a14.5 14.5 0 0 0 0 9.6l-7.7 6a24 24 0 0 1 0-21.6l7.7 6z"/>
         <path fill="#34A853" d="M24 48c6.1 0 11.3-2 15-5.5l-7.3-5.7c-2 1.4-4.6 2.2-7.7 2.2-6.4 0-11.9-3.6-13.8-8.7l-7.7 6C6.5 42.6 14.6 48 24 48z"/>
       </svg>
-      Continue with Google
+      <span data-i18n="continue_google">Continue with Google</span>
     </button>
 
-    <button id="demoBtn" class="demo-link">Continue as guest (demo mode)</button>
+    <button id="demoBtn" class="demo-link" data-i18n="continue_guest">Continue as guest (demo mode)</button>
 
     <div id="authError" class="auth-error" hidden></div>
 
-    <div class="auth-note">Prototype build — Google sign-in and password auth are simulated for demo purposes. A production deployment would use Google Identity Services / an auth provider with a real backend.</div>
+    <div class="auth-note" data-i18n="auth_note">Prototype build — Google sign-in and password auth are simulated for demo purposes. A production deployment would use Google Identity Services / an auth provider with a real backend.</div>
   </div>
 </div>
 
@@ -105,11 +111,11 @@
       <div class="brand-mark"></div>
       <div>
         <div class="brand-name">MINEX</div>
-        <div class="brand-sub">Mining Intelligence &amp; Reporting Assistant</div>
+        <div class="brand-sub" data-i18n="brand_sub">Mining Intelligence &amp; Reporting Assistant</div>
       </div>
     </div>
     <div class="topbar-right">
-      <div class="lang-pill">English</div>
+      <div class="lang-pill" id="topbarLangLabel">English</div>
       <button class="icon-btn" id="bellBtn" aria-label="Notifications">
         🔔<span class="badge-dot" id="notifBadge" hidden>0</span>
       </button>
@@ -119,25 +125,25 @@
     <!-- Notifications dropdown -->
     <div class="dropdown" id="notifDropdown">
       <div class="dropdown-head">
-        <span>Notifications</span>
-        <button id="markAllRead">Mark all as read</button>
+        <span data-i18n="notifications">Notifications</span>
+        <button id="markAllRead" data-i18n="mark_all_read">Mark all as read</button>
       </div>
       <div class="notif-list" id="notifList"></div>
     </div>
   </div>
 
   <div class="crumb-row">
-    <div class="crumb">Command Center &nbsp;/&nbsp; <b id="crumbModule">Command Center</b></div>
-    <div class="crumb-stats"><span><b id="docCount">1,420</b> documents indexed</span></div>
+    <div class="crumb" data-i18n="nav_command">Command Center &nbsp;/&nbsp; <b id="crumbModule">Command Center</b></div>
+    <div class="crumb-stats"><span><b id="docCount">1,420</b> <span data-i18n="documents_indexed">documents indexed</span></span></div>
   </div>
 
   <div class="nav-row" id="navRow">
-    <button class="nav-item active" data-module="command">Command Center</button>
-    <button class="nav-item" data-module="docintel">Document Intelligence</button>
-    <button class="nav-item" data-module="mining">Mining Intelligence</button>
-    <button class="nav-item" data-module="trust">Data Trust Center</button>
-    <button class="nav-item" data-module="historical">Historical Intelligence</button>
-    <button class="nav-item" data-module="report">AI Report Studio</button>
+    <button class="nav-item active" data-module="command" data-i18n="nav_command">Command Center</button>
+    <button class="nav-item" data-module="docintel" data-i18n="nav_docintel">Document Intelligence</button>
+    <button class="nav-item" data-module="mining" data-i18n="nav_mining">Mining Intelligence</button>
+    <button class="nav-item" data-module="trust" data-i18n="nav_trust">Data Trust Center</button>
+    <button class="nav-item" data-module="historical" data-i18n="nav_historical">Historical Intelligence</button>
+    <button class="nav-item" data-module="report" data-i18n="nav_report">AI Report Studio</button>
   </div>
 
   <!-- ============================================================
@@ -145,10 +151,16 @@
        ============================================================ -->
   <div class="section" id="moduleCommand">
     <div class="section-head">
-      <h2>From scattered records to verified intelligence.</h2>
-      <p>Five connected workspaces, one dataset. Pick a module to go deeper.</p>
+      <h2 data-i18n="cc_heading">From scattered records to verified intelligence.</h2>
+      <p data-i18n="cc_sub">Five connected workspaces, one dataset. Pick a module to go deeper.</p>
     </div>
     <div class="cc-grid" id="ccGrid"></div>
+
+    <div class="section-head" style="margin-top:26px;">
+      <h2 data-i18n="impact_heading">MINEX Impact</h2>
+      <p data-i18n="impact_sub">Prototype benchmarks only — not measured production performance.</p>
+    </div>
+    <div class="cc-grid" id="impactGrid"></div>
   </div>
 
   <!-- ============================================================
@@ -159,12 +171,12 @@
     <!-- Upload -->
     <div class="section">
       <div class="upload-box">
-        <strong>Drop mining records here, or browse your files</strong>
-        <span>PDF, scanned PDF, Word, Excel or CSV, and images — up to 100&nbsp;MB each</span>
+        <strong data-i18n="upload_title">Drop mining records here, or browse your files</strong>
+        <span data-i18n="upload_sub">PDF, scanned PDF, Word, Excel or CSV, and images — up to 100&nbsp;MB each</span>
         <input type="file" id="fileInput" multiple hidden accept=".pdf,.doc,.docx,.xls,.xlsx,.csv,.png,.jpg,.jpeg,.tif,.tiff">
         <div class="upload-actions">
-          <button class="btn" id="browseBtn">Browse files</button>
-          <button class="btn btn-primary" id="uploadBtn">Upload documents</button>
+          <button class="btn" id="browseBtn" data-i18n="browse_files">Browse files</button>
+          <button class="btn btn-primary" id="uploadBtn" data-i18n="upload_documents">Upload documents</button>
         </div>
         <div class="selected-files" id="selectedFiles" hidden></div>
       </div>
@@ -183,23 +195,32 @@
       </div>
     </div>
 
+    <!-- Word cloud / topic identification -->
+    <div class="section">
+      <div class="section-head">
+        <h2 data-i18n="topics_heading">Topics &amp; word cloud</h2>
+        <p data-i18n="topics_sub">Automatically identified from the document repository. Click a topic to filter.</p>
+      </div>
+      <div class="wordcloud-wrap" id="topicsWrap"></div>
+    </div>
+
     <!-- Search -->
     <div class="section">
       <div class="section-head">
-        <h2>Search across all documents</h2>
-        <p>Find information across your entire mining document repository.</p>
+        <h2 data-i18n="search_heading">Search across all documents</h2>
+        <p data-i18n="search_sub">Find information across your entire mining document repository.</p>
       </div>
 
       <div class="search-box">
         <span aria-hidden="true">🔍</span>
-        <input id="searchInput" type="text" value="coal production" placeholder="Try “coal production” or “seam thickness”">
+        <input id="searchInput" type="text" value="coal production" data-i18n-ph="search_placeholder" placeholder="Try “coal production” or “seam thickness”">
       </div>
 
       <div class="filter-row" id="filterRow">
-        <button class="chip on" data-filter="all">All formats</button>
-        <button class="chip" data-filter="pdf">PDF</button>
-        <button class="chip" data-filter="excel">Excel</button>
-        <button class="chip" data-filter="scan">Scanned</button>
+        <button class="chip on" data-filter="all" data-i18n="filter_all">All formats</button>
+        <button class="chip" data-filter="pdf" data-i18n="filter_pdf">PDF</button>
+        <button class="chip" data-filter="excel" data-i18n="filter_excel">Excel</button>
+        <button class="chip" data-filter="scan" data-i18n="filter_scan">Scanned</button>
       </div>
 
       <div class="result-count" id="resultCount"></div>
@@ -209,8 +230,8 @@
     <!-- Repository -->
     <div class="section">
       <div class="section-head">
-        <h2>Document repository</h2>
-        <p>Everything MINEX has ingested, with its verification status.</p>
+        <h2 data-i18n="repo_heading">Document repository</h2>
+        <p data-i18n="repo_sub">Everything MINEX has ingested, with its verification status.</p>
       </div>
       <div id="repoWrap"></div>
     </div>
@@ -222,21 +243,21 @@
        ============================================================ -->
   <div class="section" id="moduleMining" hidden>
     <div class="section-head">
-      <h2>Ask MINEX</h2>
-      <p>Ask a question in plain language. Every answer is grounded in a source document.</p>
+      <h2 data-i18n="ask_minex_heading">Ask MINEX</h2>
+      <p data-i18n="ask_minex_sub">Ask a question in plain language. Every answer is grounded in a source document.</p>
     </div>
 
     <div class="search-box">
       <span aria-hidden="true">💬</span>
-      <input id="miningQueryInput" type="text" placeholder="e.g. What was coal production from 2020 to 2025?">
-      <button class="icon-btn" id="miningVoiceBtn" aria-label="Voice query" title="Voice query (simulated)">🎙️</button>
-      <button class="btn btn-primary" id="miningAskBtn">Ask</button>
+      <input id="miningQueryInput" type="text" data-i18n-ph="ask_placeholder" placeholder="e.g. What was coal production from 2020 to 2025?">
+      <button class="icon-btn" id="miningVoiceBtn" aria-label="Voice query" title="Voice query">🎙️</button>
+      <button class="btn btn-primary" id="miningAskBtn" data-i18n="ask_btn">Ask</button>
     </div>
 
     <div class="filter-row" id="miningSuggested"></div>
 
     <div id="miningRecent" class="mi-recent" hidden>
-      <div class="drawer-label">Recent queries</div>
+      <div class="drawer-label" data-i18n="recent_queries">Recent queries</div>
       <div class="filter-row" id="miningRecentList"></div>
     </div>
 
@@ -248,19 +269,19 @@
        ============================================================ -->
   <div class="section" id="moduleTrust" hidden>
     <div class="section-head">
-      <h2>Data Trust Center</h2>
-      <p>MINEX identifies conflicts and quality issues. Final verification remains with the authorized human expert.</p>
+      <h2 data-i18n="trust_heading">Data Trust Center</h2>
+      <p data-i18n="trust_sub">MINEX identifies conflicts and quality issues. Final verification remains with the authorized human expert.</p>
     </div>
 
     <div class="cc-grid" id="trustSummary"></div>
 
     <div class="section-head" style="margin-top:22px;">
-      <h2>Conflicts detected</h2>
+      <h2 data-i18n="conflicts_heading">Conflicts detected</h2>
     </div>
     <div id="conflictsWrap"></div>
 
     <div class="section-head" style="margin-top:22px;">
-      <h2>Data quality checks</h2>
+      <h2 data-i18n="quality_heading">Data quality checks</h2>
     </div>
     <div id="qualityWrap" class="cc-grid"></div>
   </div>
@@ -270,12 +291,13 @@
        ============================================================ -->
   <div class="section" id="moduleHistorical" hidden>
     <div class="section-head">
-      <h2>Historical Intelligence</h2>
-      <p>A consistent, connected dataset from 2020 to 2025. Change the filters — everything below updates.</p>
+      <h2 data-i18n="hist_heading">Historical Intelligence</h2>
+      <p data-i18n="hist_sub">A consistent, connected dataset from 2020 to 2025. Change the filters — everything below updates.</p>
+      <p style="font-size:11.5px;color:var(--ink-soft);font-weight:600;" data-i18n="synthetic_label">Synthetic Demo Dataset</p>
     </div>
 
     <div class="filter-row">
-      <label class="hi-field">Metric
+      <label class="hi-field"><span data-i18n="metric_label">Metric</span>
         <select id="histMetric">
           <option value="production">Coal Production</option>
           <option value="target">Production Target</option>
@@ -285,10 +307,10 @@
           <option value="quality">Coal Grade / Quality</option>
         </select>
       </label>
-      <label class="hi-field">From
+      <label class="hi-field"><span data-i18n="from_label">From</span>
         <select id="histFrom"></select>
       </label>
-      <label class="hi-field">To
+      <label class="hi-field"><span data-i18n="to_label">To</span>
         <select id="histTo"></select>
       </label>
     </div>
@@ -302,7 +324,7 @@
     <div class="drawer-snippet" id="histInsight" style="margin-top:14px;"></div>
 
     <div class="section-head" style="margin-top:22px;">
-      <h2>Year-by-year, with source</h2>
+      <h2 data-i18n="hist_table_heading">Year-by-year, with source</h2>
     </div>
     <div id="histTable"></div>
   </div>
@@ -312,29 +334,29 @@
        ============================================================ -->
   <div class="section" id="moduleReport" hidden>
     <div class="section-head">
-      <h2>AI Report Studio</h2>
-      <p>Select what should go into the report, then generate a draft grounded in verified records.</p>
+      <h2 data-i18n="report_heading">AI Report Studio</h2>
+      <p data-i18n="report_sub">Select what should go into the report, then generate a draft grounded in verified records.</p>
     </div>
 
     <div class="report-builder">
       <div>
-        <div class="drawer-label">Include years</div>
+        <div class="drawer-label" data-i18n="include_years">Include years</div>
         <div class="filter-row" id="reportYears"></div>
-        <div class="drawer-label" style="margin-top:12px;">Include metrics</div>
+        <div class="drawer-label" style="margin-top:12px;" data-i18n="include_metrics">Include metrics</div>
         <div class="filter-row" id="reportMetrics"></div>
-        <div class="drawer-label" style="margin-top:12px;">Include</div>
+        <div class="drawer-label" style="margin-top:12px;" data-i18n="include_label">Include</div>
         <div class="filter-row">
-          <label class="checkbox-row"><input type="checkbox" id="reportIncludeConflicts" checked> Data conflicts</label>
-          <label class="checkbox-row"><input type="checkbox" id="reportIncludeSources" checked> Source references</label>
+          <label class="checkbox-row"><input type="checkbox" id="reportIncludeConflicts" checked> <span data-i18n="include_conflicts">Data conflicts</span></label>
+          <label class="checkbox-row"><input type="checkbox" id="reportIncludeSources" checked> <span data-i18n="include_sources">Source references</span></label>
         </div>
-        <button class="btn btn-primary" id="generateReportBtn" style="margin-top:16px;width:100%;">Generate report</button>
+        <button class="btn btn-primary" id="generateReportBtn" style="margin-top:16px;width:100%;" data-i18n="generate_report">Generate report</button>
       </div>
     </div>
 
     <div id="reportPreviewWrap"></div>
 
     <div class="section-head" style="margin-top:22px;">
-      <h2>Version history</h2>
+      <h2 data-i18n="version_history">Version history</h2>
     </div>
     <div id="reportVersionsWrap"><div class="empty-state">No versions saved yet. Generate a report and save a version.</div></div>
   </div>
@@ -401,23 +423,20 @@
     </div>
 
     <div class="settings-block">
-      <div class="settings-block-title">Account details</div>
+      <div class="settings-block-title" data-i18n="account_details">Account details</div>
       <div class="settings-field"><span>Organization</span><span id="settingsOrg">—</span></div>
       <div class="settings-field"><span>Employee ID</span><span id="settingsEmpId">—</span></div>
       <div class="settings-field"><span>Signed in with</span><span id="settingsMethod">—</span></div>
     </div>
 
     <div class="settings-block">
-      <div class="settings-block-title">Preferences</div>
+      <div class="settings-block-title" data-i18n="preferences">Preferences</div>
       <div class="settings-field">
-        <span>Interface language</span>
+        <span data-i18n="interface_language">Interface language</span>
         <select id="langSelect">
           <option>English</option>
           <option>Hindi</option>
           <option>Marathi</option>
-          <option>Bengali</option>
-          <option>Tamil</option>
-          <option>Telugu</option>
         </select>
       </div>
       <div class="settings-field">
@@ -426,15 +445,25 @@
       </div>
     </div>
 
-    <button class="btn btn-danger logout-btn" id="logoutBtn">Log out</button>
+    <button class="btn btn-danger logout-btn" id="logoutBtn" data-i18n="log_out">Log out</button>
   </div>
 </div>
 
-</div><!-- /appShell -->
+<!-- Read Aloud floating control bar -->
+<div class="read-aloud-bar" id="readAloudBar">
+  <span class="ra-label" data-i18n="read_aloud">Read aloud</span>
+  <button class="ra-btn" id="raPlay" title="Play">▶</button>
+  <button class="ra-btn" id="raPause" hidden title="Pause">⏸</button>
+  <button class="ra-btn" id="raResume" hidden title="Resume">▶</button>
+  <button class="ra-btn" id="raStop" hidden title="Stop">⏹</button>
+</div>
 
 <div class="toast" id="toast"></div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.4/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="i18n.js"></script>
 <script src="data.js"></script>
 <script src="app.js"></script>
 </body>
