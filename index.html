@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MINEX — Mining Intelligence &amp; Reporting Assistant</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<!-- ============================================================
+     AUTH SCREEN
+     ============================================================ -->
+<div id="authScreen" class="auth-screen">
+  <div class="auth-card">
+    <div class="auth-brand">
+      <div class="brand-mark"></div>
+      <div class="auth-brand-name">MINEX</div>
+      <div class="auth-brand-sub">Mining Intelligence &amp; Reporting Assistant</div>
+    </div>
+
+    <div class="auth-tabs">
+      <button class="auth-tab on" data-tab="login" id="tabLogin">Log in</button>
+      <button class="auth-tab" data-tab="signup" id="tabSignup">Sign up</button>
+    </div>
+
+    <form id="loginForm" class="auth-form">
+      <div class="field">
+        <label for="loginEmail">Work email</label>
+        <input id="loginEmail" type="email" placeholder="you@cmpdi.gov.in" required>
+      </div>
+      <div class="field">
+        <label for="loginPassword">Password</label>
+        <div class="field-password">
+          <input id="loginPassword" type="password" placeholder="Enter your password" required>
+          <button type="button" class="pwd-toggle" data-target="loginPassword">Show</button>
+        </div>
+      </div>
+      <div class="auth-row">
+        <label class="checkbox-row"><input type="checkbox" checked> Remember me</label>
+        <a href="#" id="forgotLink">Forgot password?</a>
+      </div>
+      <button type="submit" class="btn btn-primary auth-submit">Log in</button>
+    </form>
+
+    <form id="signupForm" class="auth-form" hidden>
+      <div class="field">
+        <label for="suName">Full name</label>
+        <input id="suName" type="text" placeholder="Your name" required>
+      </div>
+      <div class="field">
+        <label for="suEmail">Work email</label>
+        <input id="suEmail" type="email" placeholder="you@cmpdi.gov.in" required>
+      </div>
+      <div class="field">
+        <label for="suOrg">Organization</label>
+        <input id="suOrg" type="text" placeholder="e.g. CMPDI, BCCL, MCL" required>
+      </div>
+      <div class="field">
+        <label for="suPassword">Password</label>
+        <div class="field-password">
+          <input id="suPassword" type="password" placeholder="Create a password" required>
+          <button type="button" class="pwd-toggle" data-target="suPassword">Show</button>
+        </div>
+      </div>
+      <div class="field">
+        <label for="suConfirm">Confirm password</label>
+        <input id="suConfirm" type="password" placeholder="Re-enter password" required>
+      </div>
+      <button type="submit" class="btn btn-primary auth-submit">Create account</button>
+    </form>
+
+    <div id="authLoading" class="auth-loading" hidden>
+      <div class="spinner"></div><span id="authLoadingText">Signing in…</span>
+    </div>
+
+    <div class="auth-divider">or continue with</div>
+
+    <button id="googleBtn" class="btn google-btn">
+      <svg class="google-g" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
+        <path fill="#EA4335" d="M24 9.5c3.4 0 6.5 1.2 8.9 3.5l6.6-6.6C35.5 2.6 30.1 0 24 0 14.6 0 6.5 5.4 2.5 13.2l7.7 6C12.1 13.1 17.6 9.5 24 9.5z"/>
+        <path fill="#4285F4" d="M46.5 24.5c0-1.6-.1-3.2-.4-4.7H24v9h12.6c-.5 3-2.2 5.5-4.7 7.2l7.3 5.7c4.2-3.9 6.8-9.7 6.8-17.2z"/>
+        <path fill="#FBBC05" d="M10.2 19.2a14.5 14.5 0 0 0 0 9.6l-7.7 6a24 24 0 0 1 0-21.6l7.7 6z"/>
+        <path fill="#34A853" d="M24 48c6.1 0 11.3-2 15-5.5l-7.3-5.7c-2 1.4-4.6 2.2-7.7 2.2-6.4 0-11.9-3.6-13.8-8.7l-7.7 6C6.5 42.6 14.6 48 24 48z"/>
+      </svg>
+      Continue with Google
+    </button>
+
+    <button id="demoBtn" class="demo-link">Continue as guest (demo mode)</button>
+
+    <div id="authError" class="auth-error" hidden></div>
+
+    <div class="auth-note">Prototype build — Google sign-in and password auth are simulated for demo purposes. A production deployment would use Google Identity Services / an auth provider with a real backend.</div>
+  </div>
+</div>
+
+<!-- ============================================================
+     APP SHELL
+     ============================================================ -->
+<div id="appShell" hidden>
+<div class="app">
+
+  <div class="topbar">
+    <div class="brand">
+      <div class="brand-mark"></div>
+      <div>
+        <div class="brand-name">MINEX</div>
+        <div class="brand-sub">Mining Intelligence &amp; Reporting Assistant</div>
+      </div>
+    </div>
+    <div class="topbar-right">
+      <div class="lang-pill">English</div>
+      <button class="icon-btn" id="bellBtn" aria-label="Notifications">
+        🔔<span class="badge-dot" id="notifBadge" hidden>0</span>
+      </button>
+      <button class="avatar-btn" id="avatarBtn" aria-label="Account">--</button>
+    </div>
+
+    <!-- Notifications dropdown -->
+    <div class="dropdown" id="notifDropdown">
+      <div class="dropdown-head">
+        <span>Notifications</span>
+        <button id="markAllRead">Mark all as read</button>
+      </div>
+      <div class="notif-list" id="notifList"></div>
+    </div>
+  </div>
+
+  <div class="crumb-row">
+    <div class="crumb">Command Center &nbsp;/&nbsp; <b id="crumbModule">Document Intelligence</b></div>
+    <div class="crumb-stats"><span><b id="docCount">1,420</b> documents indexed</span></div>
+  </div>
+
+  <div class="nav-row" id="navRow">
+    <button class="nav-item" data-module="command">Command Center</button>
+    <button class="nav-item active" data-module="docintel">Document Intelligence</button>
+    <button class="nav-item" data-module="mining">Mining Intelligence</button>
+    <button class="nav-item" data-module="trust">Data Trust Center</button>
+    <button class="nav-item" data-module="historical">Historical Intelligence</button>
+    <button class="nav-item" data-module="report">AI Report Studio</button>
+  </div>
+
+  <!-- ============================================================
+       MODULE: DOCUMENT INTELLIGENCE (fully built)
+       ============================================================ -->
+  <div id="moduleDocIntel">
+
+    <!-- Upload -->
+    <div class="section">
+      <div class="upload-box">
+        <strong>Drop mining records here, or browse your files</strong>
+        <span>PDF, scanned PDF, Word, Excel or CSV, and images — up to 100&nbsp;MB each</span>
+        <input type="file" id="fileInput" multiple hidden accept=".pdf,.doc,.docx,.xls,.xlsx,.csv,.png,.jpg,.jpeg,.tif,.tiff">
+        <div class="upload-actions">
+          <button class="btn" id="browseBtn">Browse files</button>
+          <button class="btn btn-primary" id="uploadBtn">Upload documents</button>
+        </div>
+        <div class="selected-files" id="selectedFiles" hidden></div>
+      </div>
+
+      <div class="pipeline" id="pipelineCard">
+        <div class="pipeline-top">
+          <span id="pipelineFileName">Processing Annual_Production_Statement_2024.pdf</span>
+          <span class="job" id="pipelineJob">48 of 48 pages read</span>
+        </div>
+        <div class="steps">
+          <div class="step done" id="step1">
+            <div class="step-label">Upload</div>
+            <div class="step-state">Complete</div>
+          </div>
+          <div class="step active" id="step2">
+            <div class="step-label">Extract text &amp; tables</div>
+            <div class="step-state">94%</div>
+          </div>
+          <div class="step" id="step3">
+            <div class="step-label">Structure records</div>
+            <div class="step-state">Queued</div>
+          </div>
+          <div class="step" id="step4">
+            <div class="step-label">Ready to search</div>
+            <div class="step-state">Pending</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Search -->
+    <div class="section">
+      <div class="section-head">
+        <h2>Search across all documents</h2>
+        <p>Find information across your entire mining document repository.</p>
+      </div>
+
+      <div class="search-box">
+        <span aria-hidden="true">🔍</span>
+        <input id="searchInput" type="text" value="coal production" placeholder="Try “coal production” or “seam thickness”">
+      </div>
+
+      <div class="filter-row" id="filterRow">
+        <button class="chip on" data-filter="all">All formats</button>
+        <button class="chip" data-filter="pdf">PDF</button>
+        <button class="chip" data-filter="excel">Excel</button>
+        <button class="chip" data-filter="scan">Scanned</button>
+      </div>
+
+      <div class="result-count" id="resultCount"></div>
+      <div id="resultsWrap"></div>
+    </div>
+
+    <!-- Repository -->
+    <div class="section">
+      <div class="section-head">
+        <h2>Document repository</h2>
+        <p>Everything MINEX has ingested, with its verification status.</p>
+      </div>
+      <div id="repoWrap"></div>
+    </div>
+
+  </div><!-- /moduleDocIntel -->
+
+  <!-- ============================================================
+       OTHER MODULES: coming-soon placeholder (shared shell)
+       ============================================================ -->
+  <div class="section" id="moduleComingSoon" hidden>
+    <div class="coming-soon">
+      <div class="coming-soon-icon" id="comingSoonIcon">⛏️</div>
+      <h2 id="comingSoonTitle">Mining Intelligence</h2>
+      <p id="comingSoonText">This module is next on the build list.</p>
+      <button class="btn btn-primary" id="comingSoonBack">Back to Document Intelligence</button>
+    </div>
+  </div>
+
+</div>
+
+<!-- Evidence drawer -->
+<div class="overlay" id="overlay">
+  <div class="drawer">
+    <div class="drawer-handle"></div>
+    <div class="drawer-head">
+      <div>
+        <div class="drawer-title" id="drawerTitle">—</div>
+        <div class="drawer-sub" id="drawerSub">—</div>
+      </div>
+      <button class="drawer-close" id="drawerClose">✕</button>
+    </div>
+
+    <div class="drawer-block">
+      <div class="drawer-label">Matched text</div>
+      <div class="drawer-snippet" id="drawerSnippet">—</div>
+    </div>
+
+    <div class="drawer-facts">
+      <div><div class="fact-label">Extraction confidence</div><div class="fact-value" id="factConfidence">—</div></div>
+      <div><div class="fact-label">Verification status</div><div class="fact-value" id="factStatus">—</div></div>
+      <div><div class="fact-label">Source type</div><div class="fact-value" id="factSource">—</div></div>
+    </div>
+
+    <button class="tech-toggle" id="techToggle">Show technical details</button>
+    <div class="tech-panel" id="techPanel">
+      <div><b>Record ID:</b> <span id="techRecord">—</span></div>
+      <div><b>Extraction method:</b> <span id="techMethod">—</span></div>
+      <div><b>Last indexed:</b> <span id="techIndexed">—</span></div>
+    </div>
+
+    <div class="drawer-actions">
+      <button class="btn">Open source document</button>
+      <button class="btn btn-verified">Mark verified</button>
+      <button class="btn btn-review">Needs review</button>
+    </div>
+
+    <div class="handoff">
+      <div class="handoff-text">Want to dig deeper into this figure — compare years, check for conflicts, or chart a trend?</div>
+      <button class="btn btn-primary" id="handoffBtn">Analyze in Mining Intelligence</button>
+    </div>
+  </div>
+</div>
+
+<!-- Settings / account drawer -->
+<div class="overlay" id="settingsOverlay">
+  <div class="drawer">
+    <div class="drawer-handle"></div>
+    <div class="drawer-head">
+      <div class="settings-profile">
+        <div class="avatar-circle" id="settingsAvatar">--</div>
+        <div>
+          <div class="settings-name" id="settingsName">—</div>
+          <div class="settings-email" id="settingsEmail">—</div>
+          <div class="settings-role" id="settingsRole">—</div>
+        </div>
+      </div>
+      <button class="drawer-close" id="settingsClose">✕</button>
+    </div>
+
+    <div class="settings-block">
+      <div class="settings-block-title">Account details</div>
+      <div class="settings-field"><span>Organization</span><span id="settingsOrg">—</span></div>
+      <div class="settings-field"><span>Employee ID</span><span id="settingsEmpId">—</span></div>
+      <div class="settings-field"><span>Signed in with</span><span id="settingsMethod">—</span></div>
+    </div>
+
+    <div class="settings-block">
+      <div class="settings-block-title">Preferences</div>
+      <div class="settings-field">
+        <span>Interface language</span>
+        <select id="langSelect">
+          <option>English</option>
+          <option>Hindi</option>
+          <option>Marathi</option>
+          <option>Bengali</option>
+          <option>Tamil</option>
+          <option>Telugu</option>
+        </select>
+      </div>
+      <div class="settings-field">
+        <span>Notification emails</span>
+        <span>On</span>
+      </div>
+    </div>
+
+    <button class="btn btn-danger logout-btn" id="logoutBtn">Log out</button>
+  </div>
+</div>
+
+</div><!-- /appShell -->
+
+<div class="toast" id="toast"></div>
+
+<script src="app.js"></script>
+</body>
+</html>
