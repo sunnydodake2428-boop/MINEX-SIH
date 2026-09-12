@@ -127,13 +127,13 @@
   </div>
 
   <div class="crumb-row">
-    <div class="crumb">Command Center &nbsp;/&nbsp; <b id="crumbModule">Document Intelligence</b></div>
+    <div class="crumb">Command Center &nbsp;/&nbsp; <b id="crumbModule">Command Center</b></div>
     <div class="crumb-stats"><span><b id="docCount">1,420</b> documents indexed</span></div>
   </div>
 
   <div class="nav-row" id="navRow">
-    <button class="nav-item" data-module="command">Command Center</button>
-    <button class="nav-item active" data-module="docintel">Document Intelligence</button>
+    <button class="nav-item active" data-module="command">Command Center</button>
+    <button class="nav-item" data-module="docintel">Document Intelligence</button>
     <button class="nav-item" data-module="mining">Mining Intelligence</button>
     <button class="nav-item" data-module="trust">Data Trust Center</button>
     <button class="nav-item" data-module="historical">Historical Intelligence</button>
@@ -141,9 +141,20 @@
   </div>
 
   <!-- ============================================================
-       MODULE: DOCUMENT INTELLIGENCE (fully built)
+       MODULE: COMMAND CENTER
        ============================================================ -->
-  <div id="moduleDocIntel">
+  <div class="section" id="moduleCommand">
+    <div class="section-head">
+      <h2>From scattered records to verified intelligence.</h2>
+      <p>Five connected workspaces, one dataset. Pick a module to go deeper.</p>
+    </div>
+    <div class="cc-grid" id="ccGrid"></div>
+  </div>
+
+  <!-- ============================================================
+       MODULE: DOCUMENT INTELLIGENCE
+       ============================================================ -->
+  <div id="moduleDocIntel" hidden>
 
     <!-- Upload -->
     <div class="section">
@@ -158,28 +169,16 @@
         <div class="selected-files" id="selectedFiles" hidden></div>
       </div>
 
-      <div class="pipeline" id="pipelineCard">
+      <div class="pipeline" id="pipelineCard" hidden>
         <div class="pipeline-top">
-          <span id="pipelineFileName">Processing Annual_Production_Statement_2024.pdf</span>
-          <span class="job" id="pipelineJob">48 of 48 pages read</span>
+          <span id="pipelineFileName">—</span>
+          <span class="job" id="pipelineJob">—</span>
         </div>
         <div class="steps">
-          <div class="step done" id="step1">
-            <div class="step-label">Upload</div>
-            <div class="step-state">Complete</div>
-          </div>
-          <div class="step active" id="step2">
-            <div class="step-label">Extract text &amp; tables</div>
-            <div class="step-state">94%</div>
-          </div>
-          <div class="step" id="step3">
-            <div class="step-label">Structure records</div>
-            <div class="step-state">Queued</div>
-          </div>
-          <div class="step" id="step4">
-            <div class="step-label">Ready to search</div>
-            <div class="step-state">Pending</div>
-          </div>
+          <div class="step" id="step1"><div class="step-label">Upload</div><div class="step-state">Pending</div></div>
+          <div class="step" id="step2"><div class="step-label">Extract text &amp; tables</div><div class="step-state">Pending</div></div>
+          <div class="step" id="step3"><div class="step-label">Structure records</div><div class="step-state">Pending</div></div>
+          <div class="step" id="step4"><div class="step-label">Ready to search</div><div class="step-state">Pending</div></div>
         </div>
       </div>
     </div>
@@ -219,15 +218,125 @@
   </div><!-- /moduleDocIntel -->
 
   <!-- ============================================================
-       OTHER MODULES: coming-soon placeholder (shared shell)
+       MODULE: MINING INTELLIGENCE
        ============================================================ -->
-  <div class="section" id="moduleComingSoon" hidden>
-    <div class="coming-soon">
-      <div class="coming-soon-icon" id="comingSoonIcon">⛏️</div>
-      <h2 id="comingSoonTitle">Mining Intelligence</h2>
-      <p id="comingSoonText">This module is next on the build list.</p>
-      <button class="btn btn-primary" id="comingSoonBack">Back to Document Intelligence</button>
+  <div class="section" id="moduleMining" hidden>
+    <div class="section-head">
+      <h2>Ask MINEX</h2>
+      <p>Ask a question in plain language. Every answer is grounded in a source document.</p>
     </div>
+
+    <div class="search-box">
+      <span aria-hidden="true">💬</span>
+      <input id="miningQueryInput" type="text" placeholder="e.g. What was coal production from 2020 to 2025?">
+      <button class="icon-btn" id="miningVoiceBtn" aria-label="Voice query" title="Voice query (simulated)">🎙️</button>
+      <button class="btn btn-primary" id="miningAskBtn">Ask</button>
+    </div>
+
+    <div class="filter-row" id="miningSuggested"></div>
+
+    <div id="miningRecent" class="mi-recent" hidden>
+      <div class="drawer-label">Recent queries</div>
+      <div class="filter-row" id="miningRecentList"></div>
+    </div>
+
+    <div id="miningAnswerWrap"></div>
+  </div>
+
+  <!-- ============================================================
+       MODULE: DATA TRUST CENTER
+       ============================================================ -->
+  <div class="section" id="moduleTrust" hidden>
+    <div class="section-head">
+      <h2>Data Trust Center</h2>
+      <p>MINEX identifies conflicts and quality issues. Final verification remains with the authorized human expert.</p>
+    </div>
+
+    <div class="cc-grid" id="trustSummary"></div>
+
+    <div class="section-head" style="margin-top:22px;">
+      <h2>Conflicts detected</h2>
+    </div>
+    <div id="conflictsWrap"></div>
+
+    <div class="section-head" style="margin-top:22px;">
+      <h2>Data quality checks</h2>
+    </div>
+    <div id="qualityWrap" class="cc-grid"></div>
+  </div>
+
+  <!-- ============================================================
+       MODULE: HISTORICAL INTELLIGENCE
+       ============================================================ -->
+  <div class="section" id="moduleHistorical" hidden>
+    <div class="section-head">
+      <h2>Historical Intelligence</h2>
+      <p>A consistent, connected dataset from 2020 to 2025. Change the filters — everything below updates.</p>
+    </div>
+
+    <div class="filter-row">
+      <label class="hi-field">Metric
+        <select id="histMetric">
+          <option value="production">Coal Production</option>
+          <option value="target">Production Target</option>
+          <option value="overburden">Overburden Removal</option>
+          <option value="dispatch">Dispatch</option>
+          <option value="safety">Safety Compliance</option>
+          <option value="quality">Coal Grade / Quality</option>
+        </select>
+      </label>
+      <label class="hi-field">From
+        <select id="histFrom"></select>
+      </label>
+      <label class="hi-field">To
+        <select id="histTo"></select>
+      </label>
+    </div>
+
+    <div class="cc-grid" id="histKpis"></div>
+
+    <div class="chart-card">
+      <canvas id="histChart" height="220"></canvas>
+    </div>
+
+    <div class="drawer-snippet" id="histInsight" style="margin-top:14px;"></div>
+
+    <div class="section-head" style="margin-top:22px;">
+      <h2>Year-by-year, with source</h2>
+    </div>
+    <div id="histTable"></div>
+  </div>
+
+  <!-- ============================================================
+       MODULE: AI REPORT STUDIO
+       ============================================================ -->
+  <div class="section" id="moduleReport" hidden>
+    <div class="section-head">
+      <h2>AI Report Studio</h2>
+      <p>Select what should go into the report, then generate a draft grounded in verified records.</p>
+    </div>
+
+    <div class="report-builder">
+      <div>
+        <div class="drawer-label">Include years</div>
+        <div class="filter-row" id="reportYears"></div>
+        <div class="drawer-label" style="margin-top:12px;">Include metrics</div>
+        <div class="filter-row" id="reportMetrics"></div>
+        <div class="drawer-label" style="margin-top:12px;">Include</div>
+        <div class="filter-row">
+          <label class="checkbox-row"><input type="checkbox" id="reportIncludeConflicts" checked> Data conflicts</label>
+          <label class="checkbox-row"><input type="checkbox" id="reportIncludeSources" checked> Source references</label>
+        </div>
+        <button class="btn btn-primary" id="generateReportBtn" style="margin-top:16px;width:100%;">Generate report</button>
+      </div>
+    </div>
+
+    <div id="reportPreviewWrap"></div>
+
+    <div class="section-head" style="margin-top:22px;">
+      <h2>Version history</h2>
+    </div>
+    <div id="reportVersionsWrap"><div class="empty-state">No versions saved yet. Generate a report and save a version.</div></div>
   </div>
 
 </div>
@@ -263,9 +372,9 @@
     </div>
 
     <div class="drawer-actions">
-      <button class="btn">Open source document</button>
-      <button class="btn btn-verified">Mark verified</button>
-      <button class="btn btn-review">Needs review</button>
+      <button class="btn" id="drawerOpenSource">Open source document</button>
+      <button class="btn btn-verified" id="drawerMarkVerified">Mark verified</button>
+      <button class="btn btn-review" id="drawerMarkReview">Needs review</button>
     </div>
 
     <div class="handoff">
@@ -325,6 +434,8 @@
 
 <div class="toast" id="toast"></div>
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.4/chart.umd.min.js"></script>
+<script src="data.js"></script>
 <script src="app.js"></script>
 </body>
 </html>

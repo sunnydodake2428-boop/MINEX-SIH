@@ -1,691 +1,879 @@
-/* ============================================================
-   DEMO DATASET
-   ============================================================ */
-const documents = [
-  {
-    id: "PRD-2024-042",
-    title: "Annual Production Statement 2024",
-    sub: "CMPDI Head Office",
-    type: "pdf",
-    typeLabel: "PDF",
-    loc: "Page 42",
-    date: "2024",
-    status: "verified",
-    confidence: "98.4%",
-    sourceType: "Public source document",
-    method: "OCR + table extraction",
-    indexed: "3 days ago",
-    text: "Total raw coal production across North Karanpura coalfields reached 54.1 MT in FY24, outperforming targets by 8.4 percent with mechanized shovel-dumper combinations."
-  },
-  {
-    id: "PRD-2023-118",
-    title: "Overburden Removal & Production Reconciliation, Q3",
-    sub: "BCCL, Dhanbad mining zone",
-    type: "excel",
-    typeLabel: "Excel",
-    loc: "Sheet: Production",
-    date: "2023",
-    status: "verified",
-    confidence: "96.1%",
-    sourceType: "Public source document",
-    method: "Structured cell parsing",
-    indexed: "1 week ago",
-    text: "Quarterly coal production and overburden removal reconciled against target. Coal production for Q3 stood at 13.9 MT against a target of 13.1 MT.",
-    cells: [
-      "Coal production Q1: 12.6 MT",
-      "Coal production Q2: 13.2 MT",
-      "Coal production Q3: 13.9 MT",
-      "Coal production Q4 (proj.): 14.1 MT",
-      "Overburden removal Q3: 28.4 MCuM",
-      "Target variance: +6.1%"
-    ]
-  },
-  {
-    id: "GEO-2022-076",
-    title: "Jharia Coalfield Stratum Core Log #JH-992",
-    sub: "CMPDI Regional Institute II",
-    type: "scan",
-    typeLabel: "Scanned PDF",
-    loc: "Page 15",
-    date: "2022",
-    status: "review",
-    confidence: "82.7%",
-    sourceType: "Scanned field log",
-    method: "OCR, low scan quality",
-    indexed: "2 weeks ago",
-    text: "Seam thickness recorded at 4.2 m at borehole JH-992. Adjacent production block flagged for updated coal production estimate pending resurvey."
-  },
-  {
-    id: "ENV-2024-067",
-    title: "Environmental Clearance Monitoring Report",
-    sub: "MoEFCC compliance filing",
-    type: "pdf",
-    typeLabel: "PDF",
-    loc: "Page 67",
-    date: "2024",
-    status: "verified",
-    confidence: "94.8%",
-    sourceType: "Public source document",
-    method: "OCR + table extraction",
-    indexed: "5 days ago",
-    text: "Dust suppression and water injection logged during active high-capacity coal production blasting cycles across the Eastern block conveyors."
-  },
-  {
-    id: "PRD-2021-009",
-    title: "Talcher Coalfield Pit Slope Radar Log",
-    sub: "MCL, Angul division",
-    type: "pdf",
-    typeLabel: "PDF",
-    loc: "Page 4",
-    date: "2021",
-    status: "flagged",
-    confidence: "71.3%",
-    sourceType: "Field telemetry export",
-    method: "OCR, partial table loss",
-    indexed: "3 weeks ago",
-    text: "Slope stability radar readings taken during active bench operations; no production figures captured in this excerpt."
+/* ==========================================================================
+   MINEX app.js — vanilla JS, no build step.
+   Drives: auth, app shell chrome (notifications/settings), and all 5
+   modules. Everything reads from MINEX_DATA (data.js), so a figure shown in
+   one module is the same record another module can verify.
+   ========================================================================== */
+
+(function(){
+
+  /* ---------------------------- shared state ---------------------------- */
+  const state = {
+    user:null,
+    currentModule:"command",
+    conflictStatus:{}, // id -> 'a_verified' | 'b_verified' | 'needs_review'
+    evidenceContext:null, // whatever record is open in the evidence drawer
+    miningRecent:[],
+    reportVersions:[],
+    histChartInstance:null
+  };
+  MINEX_DATA.conflicts.forEach(c => state.conflictStatus[c.id] = c.status);
+
+  const $ = sel => document.querySelector(sel);
+  const $$ = sel => Array.from(document.querySelectorAll(sel));
+
+  function toast(msg){
+    const t = $("#toast");
+    t.textContent = msg;
+    t.classList.add("show");
+    clearTimeout(toast._t);
+    toast._t = setTimeout(()=>t.classList.remove("show"), 2600);
   }
-];
 
-const notifications = [
-  {icon:"📄", text:"Annual_Production_Statement_2024.pdf uploaded successfully.", time:"2 minutes ago", unread:true},
-  {icon:"🔎", text:"326 records extracted from Annual Production Statement 2024.", time:"2 minutes ago", unread:true},
-  {icon:"⚠️", text:"Conflict detected — Coal Production 2024 has two differing source values.", time:"1 hour ago", unread:true},
-  {icon:"✅", text:"Record PRD-2024-042 marked verified by Analyst.", time:"3 hours ago", unread:false},
-  {icon:"📊", text:"Historical analysis for Coal Production (2020–2025) is ready.", time:"Yesterday", unread:false}
-];
-
-const moduleInfo = {
-  command: {
-    icon: "🧭",
-    title: "Command Center",
-    text: "The KPI overview dashboard — production trends, verification status across the repository, and open conflicts at a glance — is next up in the build.",
-    crumb: "Command Center"
-  },
-  mining: {
-    icon: "⛏️",
-    title: "Mining Intelligence",
-    text: "Ask MINEX natural-language questions over your documents, with automatic conflict detection — e.g. two sources disagreeing on 2024 coal production (52.4 MT vs 54.1 MT) — lands here next.",
-    crumb: "Mining Intelligence"
-  },
-  trust: {
-    icon: "🛡️",
-    title: "Data Trust Center",
-    text: "A rollup of verified vs. flagged records across the whole repository, so analysts know what to trust before reporting on it.",
-    crumb: "Data Trust Center"
-  },
-  historical: {
-    icon: "📈",
-    title: "Historical Intelligence",
-    text: "Multi-year trend charts built from verified records, so a conflict resolved in Mining Intelligence can be traced across history.",
-    crumb: "Historical Intelligence"
-  },
-  report: {
-    icon: "📝",
-    title: "AI Report Studio",
-    text: "Turn a verified, trend-backed finding into a citation-linked report draft, ready for review and export.",
-    crumb: "AI Report Studio"
+  function escapeHtml(s){
+    return String(s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
   }
-};
 
-let session = null;       // { name, email, org, method }
-let activeFilter = "all";
-let currentDrawer = null;
-let currentModule = "docintel";
-let pendingFiles = [];
-let indexedCount = 1420;
-
-/* ============================================================
-   SMALL HELPERS
-   ============================================================ */
-function $(id){ return document.getElementById(id); }
-
-function showToast(msg){
-  const t = $("toast");
-  t.textContent = msg;
-  t.classList.add("show");
-  clearTimeout(showToast._timer);
-  showToast._timer = setTimeout(() => t.classList.remove("show"), 2600);
-}
-
-function initials(name){
-  return name.split(" ").filter(Boolean).slice(0,2).map(w => w[0].toUpperCase()).join("");
-}
-
-/* ============================================================
-   AUTH
-   ============================================================ */
-function setAuthTab(tab){
-  $("tabLogin").classList.toggle("on", tab === "login");
-  $("tabSignup").classList.toggle("on", tab === "signup");
-  $("loginForm").hidden = tab !== "login";
-  $("signupForm").hidden = tab !== "signup";
-  $("authError").hidden = true;
-}
-
-function showAuthError(msg){
-  $("authError").textContent = msg;
-  $("authError").hidden = false;
-}
-
-function startAuthLoading(text){
-  $("authLoading").hidden = false;
-  $("authLoadingText").textContent = text;
-  $("loginForm").hidden = true;
-  $("signupForm").hidden = true;
-}
-
-function enterApp(newSession){
-  session = newSession;
-  $("authScreen").hidden = true;
-  $("appShell").hidden = false;
-  $("avatarBtn").textContent = initials(session.name);
-  $("settingsAvatar").textContent = initials(session.name);
-  $("settingsName").textContent = session.name;
-  $("settingsEmail").textContent = session.email;
-  $("settingsRole").textContent = session.role;
-  $("settingsOrg").textContent = session.org;
-  $("settingsEmpId").textContent = session.empId;
-  $("settingsMethod").textContent = session.method;
-  renderNotifications();
-  renderResults();
-  renderRepo();
-  setModule("docintel");
-  showToast("Signed in as " + session.name);
-}
-
-function handleLogin(e){
-  e.preventDefault();
-  const email = $("loginEmail").value.trim();
-  const password = $("loginPassword").value;
-  if(!email || !password){
-    showAuthError("Enter your email and password to continue.");
-    return;
+  function highlight(text, q){
+    if(!q) return escapeHtml(text);
+    const esc = escapeHtml(text);
+    const words = q.split(/\s+/).filter(Boolean).map(w=>w.replace(/[.*+?^${}()|[\]\\]/g,'\\$&'));
+    if(!words.length) return esc;
+    const re = new RegExp("("+words.join("|")+")","ig");
+    return esc.replace(re, "<mark>$1</mark>");
   }
-  $("authError").hidden = true;
-  startAuthLoading("Signing in…");
-  setTimeout(() => {
-    $("authLoading").hidden = true;
-    enterApp({
-      name: email.split("@")[0].replace(/[._]/g," ").replace(/\b\w/g, c => c.toUpperCase()),
-      email: email,
-      role: "Verification Analyst",
-      org: "CMPDI Head Office",
-      empId: "EMP-" + Math.floor(1000 + Math.random()*9000),
-      method: "Email & password"
+
+  function statusLabel(s){
+    return { verified:"Verified", review:"Needs review", flagged:"Flagged" }[s] || s;
+  }
+
+  /* ============================================================
+     AUTH
+     ============================================================ */
+  function initAuth(){
+    $("#tabLogin").addEventListener("click", ()=>switchAuthTab("login"));
+    $("#tabSignup").addEventListener("click", ()=>switchAuthTab("signup"));
+
+    $$(".pwd-toggle").forEach(btn=>{
+      btn.addEventListener("click", ()=>{
+        const target = document.getElementById(btn.dataset.target);
+        const showing = target.type === "text";
+        target.type = showing ? "password" : "text";
+        btn.textContent = showing ? "Show" : "Hide";
+      });
     });
-  }, 900);
-}
 
-function handleSignup(e){
-  e.preventDefault();
-  const name = $("suName").value.trim();
-  const email = $("suEmail").value.trim();
-  const org = $("suOrg").value.trim();
-  const pw = $("suPassword").value;
-  const confirm = $("suConfirm").value;
-  if(!name || !email || !org || !pw){
-    showAuthError("Fill in every field to create an account.");
-    return;
-  }
-  if(pw !== confirm){
-    showAuthError("Passwords don't match.");
-    return;
-  }
-  $("authError").hidden = true;
-  startAuthLoading("Creating your account…");
-  setTimeout(() => {
-    $("authLoading").hidden = true;
-    enterApp({
-      name: name,
-      email: email,
-      role: "Verification Analyst",
-      org: org,
-      empId: "EMP-" + Math.floor(1000 + Math.random()*9000),
-      method: "Email & password"
+    $("#loginForm").addEventListener("submit", e=>{
+      e.preventDefault();
+      const email = $("#loginEmail").value.trim();
+      doAuth({ name: email.split("@")[0] || "User", email, org:"CMPDI", method:"Email & password" });
     });
-  }, 900);
-}
 
-function handleGoogleAuth(){
-  $("authError").hidden = true;
-  startAuthLoading("Connecting to Google…");
-  setTimeout(() => {
-    $("authLoading").hidden = true;
-    enterApp({
-      name: "Rahul Sharma",
-      email: "rahul.sharma@gmail.com",
-      role: "Verification Analyst",
-      org: "CMPDI Head Office",
-      empId: "EMP-4821",
-      method: "Google"
+    $("#signupForm").addEventListener("submit", e=>{
+      e.preventDefault();
+      const pw = $("#suPassword").value, cf = $("#suConfirm").value;
+      if(pw !== cf){
+        showAuthError("Passwords don't match.");
+        return;
+      }
+      doAuth({ name: $("#suName").value.trim() || "User", email: $("#suEmail").value.trim(), org: $("#suOrg").value.trim() || "CMPDI", method:"Email & password" });
     });
-  }, 1100);
-}
 
-function handleDemoLogin(){
-  enterApp({
-    name: "Guest Reviewer",
-    email: "guest@minex.demo",
-    role: "SIH Evaluator (demo access)",
-    org: "Prototype demo session",
-    empId: "GUEST",
-    method: "Guest / demo mode"
-  });
-}
+    $("#googleBtn").addEventListener("click", ()=>{
+      doAuth({ name:"Google User", email:"user@gmail.com", org:"CMPDI", method:"Google (simulated)" });
+    });
 
-function handleLogout(){
-  $("settingsOverlay").classList.remove("open");
-  session = null;
-  $("appShell").hidden = true;
-  $("authScreen").hidden = false;
-  $("loginForm").reset();
-  $("signupForm").reset();
-  setAuthTab("login");
-  showToast("You've been logged out.");
-}
-
-/* ============================================================
-   MODULE SWITCHING (nav row)
-   ============================================================ */
-function setModule(key){
-  currentModule = key;
-  document.querySelectorAll(".nav-item").forEach(b => b.classList.toggle("active", b.dataset.module === key));
-
-  const isDocIntel = key === "docintel";
-  $("moduleDocIntel").hidden = !isDocIntel;
-  $("moduleComingSoon").hidden = isDocIntel;
-
-  if(isDocIntel){
-    $("crumbModule").textContent = "Document Intelligence";
-  } else {
-    const info = moduleInfo[key];
-    $("crumbModule").textContent = info.crumb;
-    $("comingSoonIcon").textContent = info.icon;
-    $("comingSoonTitle").textContent = info.title;
-    $("comingSoonText").textContent = info.text;
-  }
-}
-
-/* ============================================================
-   NOTIFICATIONS
-   ============================================================ */
-function renderNotifications(){
-  const list = $("notifList");
-  const unreadCount = notifications.filter(n => n.unread).length;
-  const badge = $("notifBadge");
-  if(unreadCount > 0){
-    badge.hidden = false;
-    badge.textContent = unreadCount;
-  } else {
-    badge.hidden = true;
+    $("#demoBtn").addEventListener("click", ()=>{
+      doAuth({ name:"Guest", email:"guest@minex.demo", org:"Demo Mode", method:"Guest / demo mode" });
+    });
   }
 
-  if(notifications.length === 0){
-    list.innerHTML = '<div class="notif-empty">You\'re all caught up.</div>';
-    return;
+  function switchAuthTab(tab){
+    $("#tabLogin").classList.toggle("on", tab==="login");
+    $("#tabSignup").classList.toggle("on", tab==="signup");
+    $("#loginForm").hidden = tab !== "login";
+    $("#signupForm").hidden = tab !== "signup";
+    $("#authError").hidden = true;
   }
 
-  list.innerHTML = notifications.map(n => `
-    <div class="notif-item ${n.unread ? "unread" : ""}">
-      <div class="notif-icon">${n.icon}</div>
-      <div>
-        <div class="notif-text">${n.text}</div>
-        <div class="notif-time">${n.time}</div>
-      </div>
-    </div>
-  `).join("");
-}
-
-/* ============================================================
-   SEARCH ENGINE (Global Document Search)
-   ============================================================ */
-function highlight(text, term){
-  if(!term) return text;
-  const idx = text.toLowerCase().indexOf(term.toLowerCase());
-  if(idx === -1) return text;
-  return text.slice(0, idx) + "<mark>" + text.slice(idx, idx+term.length) + "</mark>" + text.slice(idx+term.length);
-}
-
-function countOccurrences(str, term){
-  if(!term) return 0;
-  const lower = str.toLowerCase();
-  const t = term.toLowerCase();
-  let count = 0, idx = 0;
-  while((idx = lower.indexOf(t, idx)) !== -1){
-    count++;
-    idx += t.length;
-  }
-  return count;
-}
-
-function docMatches(d, term){
-  if(term === "") return true;
-  const t = term.toLowerCase();
-  if(d.title.toLowerCase().includes(t) || d.text.toLowerCase().includes(t)) return true;
-  if(d.cells && d.cells.some(c => c.toLowerCase().includes(t))) return true;
-  return false;
-}
-
-function matchDetail(d, term){
-  if(d.cells){
-    const matchedCells = d.cells.filter(c => c.toLowerCase().includes(term.toLowerCase()));
-    if(matchedCells.length > 0){
-      return {
-        label: "Match found in " + matchedCells.length + " cell" + (matchedCells.length === 1 ? "" : "s"),
-        snippets: matchedCells.slice(0, 2).map(c => highlight(c, term))
-      };
-    }
-  }
-  const n = countOccurrences(d.title + " " + d.text, term);
-  return {
-    label: n + " occurrence" + (n === 1 ? "" : "s"),
-    snippets: ["…" + highlight(d.text, term) + "…"]
-  };
-}
-
-function renderResults(){
-  const term = $("searchInput").value.trim();
-  const wrap = $("resultsWrap");
-  const count = $("resultCount");
-
-  let matches = documents.filter(d => docMatches(d, term) && (activeFilter === "all" || d.type === activeFilter));
-
-  if(term === ""){
-    wrap.innerHTML = "";
-    count.textContent = "";
-    return;
+  function showAuthError(msg){
+    const el = $("#authError");
+    el.textContent = msg;
+    el.hidden = false;
   }
 
-  count.innerHTML = matches.length
-    ? "Found in <b>" + matches.length + "</b> document" + (matches.length===1 ? "" : "s")
-    : "";
-
-  if(matches.length === 0){
-    wrap.innerHTML = '<div class="empty-state">No matching information found in the available documents.<br>Try a shorter phrase, or check a different format filter.</div>';
-    return;
+  function doAuth(user){
+    $("#authError").hidden = true;
+    $("#authLoading").hidden = false;
+    $("#authLoadingText").textContent = "Signing in…";
+    $("#loginForm").hidden = true;
+    $("#signupForm").hidden = true;
+    setTimeout(()=>{
+      state.user = user;
+      $("#authScreen").hidden = true;
+      $("#appShell").hidden = false;
+      renderAccountChrome();
+      switchModule("command");
+      toast(`Welcome, ${user.name.split(" ")[0]}.`);
+    }, 700);
   }
 
-  wrap.innerHTML = matches.map(d => {
-    const detail = matchDetail(d, term);
-    return `
-    <div class="result">
-      <div class="result-top">
-        <div>
-          <div class="result-title">${d.title}</div>
-          <div class="result-meta">${d.typeLabel} · ${d.sub}</div>
-        </div>
-        <div class="result-loc">${d.loc}<br>${d.date}</div>
-      </div>
-      <div class="result-matchcount">${detail.label}</div>
-      ${detail.snippets.map(s => `<div class="result-snippet">${s}</div>`).join("")}
-      <div class="result-bottom">
-        <div class="result-confidence">Extraction confidence ${d.confidence}</div>
-        <div class="result-actions">
-          <button class="link-btn" onclick="openDrawer('${d.id}')">View evidence</button>
-          <button class="link-btn result-secondary" onclick="openDrawer('${d.id}')">Open document</button>
-        </div>
-      </div>
-    </div>
-  `;}).join("");
-}
-
-function statusLabel(s){
-  if(s === "verified") return {cls:"verified", text:"Verified"};
-  if(s === "review") return {cls:"review", text:"Needs review"};
-  return {cls:"flagged", text:"Flagged"};
-}
-
-function renderRepo(){
-  const wrap = $("repoWrap");
-  wrap.innerHTML = documents.map(d => {
-    const st = statusLabel(d.status);
-    return `
-    <div class="doc-row">
-      <div class="doc-row-top">
-        <div>
-          <div class="doc-name">${d.title}</div>
-          <div class="doc-sub">${d.sub}</div>
-        </div>
-        <div class="doc-date">${d.date}</div>
-      </div>
-      <div class="tag-row">
-        <span class="tag">${d.typeLabel}</span>
-        <span class="tag status ${st.cls}">${st.text}</span>
-      </div>
-      <div class="doc-actions">
-        <button class="link-btn" onclick="openDrawer('${d.id}')">View evidence</button>
-        <button class="link-btn" style="color:var(--ink-soft)">Open source</button>
-      </div>
-    </div>`;
-  }).join("");
-}
-
-function openDrawer(id){
-  const d = documents.find(x => x.id === id);
-  if(!d) return;
-  const term = $("searchInput").value.trim();
-  currentDrawer = {doc: d, term: term};
-  $("drawerTitle").textContent = d.title;
-  $("drawerSub").textContent = d.sub + " · " + d.loc;
-  $("drawerSnippet").innerHTML = "“…" + highlight(d.text, term) + "…”";
-  $("factConfidence").textContent = d.confidence;
-  const st = statusLabel(d.status);
-  $("factStatus").textContent = st.text;
-  $("factSource").textContent = d.sourceType;
-  $("techRecord").textContent = d.id;
-  $("techMethod").textContent = d.method;
-  $("techIndexed").textContent = d.indexed;
-  $("techPanel").classList.remove("open");
-  $("techToggle").textContent = "Show technical details";
-  $("overlay").classList.add("open");
-}
-
-/* ============================================================
-   FILE UPLOAD PIPELINE (Browse + Upload)
-   ============================================================ */
-function extFor(file){
-  const name = file.name.toLowerCase();
-  if(name.endsWith(".pdf")) return {type:"pdf", typeLabel:"PDF", method:"OCR + table extraction"};
-  if(name.endsWith(".xls") || name.endsWith(".xlsx") || name.endsWith(".csv")) return {type:"excel", typeLabel:"Excel", method:"Structured cell parsing"};
-  if(name.endsWith(".doc") || name.endsWith(".docx")) return {type:"pdf", typeLabel:"Word", method:"Document text extraction"};
-  if(name.match(/\.(png|jpe?g|tiff?)$/)) return {type:"scan", typeLabel:"Image (OCR)", method:"OCR, scanned image"};
-  return {type:"pdf", typeLabel:"Document", method:"Text extraction"};
-}
-
-function renderSelectedFiles(){
-  const wrap = $("selectedFiles");
-  if(pendingFiles.length === 0){
-    wrap.hidden = true;
-    wrap.innerHTML = "";
-    return;
+  function renderAccountChrome(){
+    const initials = state.user.name.split(" ").map(p=>p[0]).join("").slice(0,2).toUpperCase();
+    $("#avatarBtn").textContent = initials;
+    $("#settingsAvatar").textContent = initials;
+    $("#settingsName").textContent = state.user.name;
+    $("#settingsEmail").textContent = state.user.email;
+    $("#settingsRole").textContent = "Mining Data Analyst";
+    $("#settingsOrg").textContent = state.user.org;
+    $("#settingsEmpId").textContent = "EMP-" + Math.floor(10000 + Math.random()*89999);
+    $("#settingsMethod").textContent = state.user.method;
   }
-  wrap.hidden = false;
-  wrap.textContent = "Selected: " + pendingFiles.map(f => f.name).join(", ");
-}
 
-function setStep(stepEl, state, text){
-  stepEl.classList.remove("active", "done");
-  if(state) stepEl.classList.add(state);
-  stepEl.querySelector(".step-state").textContent = text;
-}
-
-function addDocumentFromFile(file){
-  const meta = extFor(file);
-  const id = "UPL-" + Date.now().toString().slice(-6) + Math.floor(Math.random()*90+10);
-  const doc = {
-    id,
-    title: file.name.replace(/\.[^.]+$/, ""),
-    sub: (session && session.org) ? "Uploaded via " + session.org : "Uploaded just now",
-    type: meta.type,
-    typeLabel: meta.typeLabel,
-    loc: "Newly indexed",
-    date: new Date().getFullYear().toString(),
-    status: "review",
-    confidence: (88 + Math.random()*10).toFixed(1) + "%",
-    sourceType: "User-uploaded document",
-    method: meta.method,
-    indexed: "Just now",
-    text: "This document was just uploaded to the prototype and is queued for full-text indexing. It currently matches searches on its file name."
-  };
-  documents.unshift(doc);
-  indexedCount++;
-  $("docCount").textContent = indexedCount.toLocaleString("en-IN");
-  renderRepo();
-  renderResults();
-  notifications.unshift({icon:"📄", text: file.name + " uploaded and indexed successfully.", time:"Just now", unread:true});
-  renderNotifications();
-}
-
-function runUploadPipeline(files){
-  $("pipelineCard").hidden = false;
-  const s1 = $("step1"), s2 = $("step2"), s3 = $("step3"), s4 = $("step4");
-  let i = 0;
-
-  function processNext(){
-    if(i >= files.length){
-      showToast(files.length + " document" + (files.length === 1 ? "" : "s") + " indexed successfully.");
-      return;
-    }
-    const file = files[i];
-    $("pipelineFileName").textContent = "Processing " + file.name;
-    $("pipelineJob").textContent = "Uploading…";
-    setStep(s1, "active", "Uploading");
-    setStep(s2, null, "Queued");
-    setStep(s3, null, "Queued");
-    setStep(s4, null, "Pending");
-
-    setTimeout(() => {
-      setStep(s1, "done", "Complete");
-      setStep(s2, "active", "0%");
-      $("pipelineJob").textContent = "Extracting text & tables…";
-      let pct = 0;
-      const iv = setInterval(() => {
-        pct += 25;
-        if(pct >= 100){
-          clearInterval(iv);
-          setStep(s2, "done", "Complete");
-          setStep(s3, "active", "Structuring…");
-          setTimeout(() => {
-            setStep(s3, "done", "Complete");
-            setStep(s4, "done", "Ready");
-            $("pipelineJob").textContent = "Ready to search";
-            addDocumentFromFile(file);
-            i++;
-            setTimeout(processNext, 500);
-          }, 650);
-        } else {
-          setStep(s2, "active", pct + "%");
-        }
-      }, 220);
-    }, 400);
-  }
-  processNext();
-}
-
-/* ============================================================
-   WIRING
-   ============================================================ */
-document.addEventListener("DOMContentLoaded", () => {
-
-  // Auth tabs
-  $("tabLogin").onclick = () => setAuthTab("login");
-  $("tabSignup").onclick = () => setAuthTab("signup");
-  $("loginForm").addEventListener("submit", handleLogin);
-  $("signupForm").addEventListener("submit", handleSignup);
-  $("googleBtn").onclick = handleGoogleAuth;
-  $("demoBtn").onclick = handleDemoLogin;
-  $("forgotLink").onclick = (e) => {
-    e.preventDefault();
-    showToast("Password reset isn't wired up in this prototype yet.");
-  };
-  document.querySelectorAll(".pwd-toggle").forEach(btn => {
-    btn.onclick = () => {
-      const input = $(btn.dataset.target);
-      const show = input.type === "password";
-      input.type = show ? "text" : "password";
-      btn.textContent = show ? "Hide" : "Show";
-    };
-  });
-
-  // Notifications
-  $("bellBtn").onclick = (e) => {
-    e.stopPropagation();
-    $("notifDropdown").classList.toggle("open");
-  };
-  $("markAllRead").onclick = () => {
-    notifications.forEach(n => n.unread = false);
+  /* ============================================================
+     APP CHROME: notifications, settings, logout, nav
+     ============================================================ */
+  function initChrome(){
     renderNotifications();
-  };
-  document.addEventListener("click", (e) => {
-    if(!$("notifDropdown").contains(e.target) && e.target !== $("bellBtn")){
-      $("notifDropdown").classList.remove("open");
+
+    $("#bellBtn").addEventListener("click", e=>{
+      e.stopPropagation();
+      $("#notifDropdown").classList.toggle("open");
+    });
+    document.addEventListener("click", ()=>$("#notifDropdown").classList.remove("open"));
+    $("#notifDropdown").addEventListener("click", e=>e.stopPropagation());
+
+    $("#markAllRead").addEventListener("click", ()=>{
+      MINEX_DATA.notifications.forEach(n=>n.unread=false);
+      renderNotifications();
+    });
+
+    $("#avatarBtn").addEventListener("click", ()=>$("#settingsOverlay").classList.add("open"));
+    $("#settingsClose").addEventListener("click", ()=>$("#settingsOverlay").classList.remove("open"));
+    $("#settingsOverlay").addEventListener("click", e=>{ if(e.target.id==="settingsOverlay") $("#settingsOverlay").classList.remove("open"); });
+
+    $("#logoutBtn").addEventListener("click", ()=>{
+      $("#settingsOverlay").classList.remove("open");
+      $("#appShell").hidden = true;
+      $("#authScreen").hidden = false;
+      state.user = null;
+      toast("Signed out.");
+    });
+
+    $$(".nav-item").forEach(btn=>{
+      btn.addEventListener("click", ()=>switchModule(btn.dataset.module));
+    });
+
+    $("#drawerClose").addEventListener("click", closeEvidenceDrawer);
+    $("#overlay").addEventListener("click", e=>{ if(e.target.id==="overlay") closeEvidenceDrawer(); });
+    $("#techToggle").addEventListener("click", ()=>{
+      $("#techPanel").classList.toggle("open");
+      $("#techToggle").textContent = $("#techPanel").classList.contains("open") ? "Hide technical details" : "Show technical details";
+    });
+    $("#drawerMarkVerified").addEventListener("click", ()=>resolveEvidenceStatus("verified"));
+    $("#drawerMarkReview").addEventListener("click", ()=>resolveEvidenceStatus("review"));
+    $("#drawerOpenSource").addEventListener("click", ()=>toast("Opening source document preview (prototype — full viewer not wired up yet)."));
+    $("#handoffBtn").addEventListener("click", ()=>{
+      const ctx = state.evidenceContext;
+      closeEvidenceDrawer();
+      switchModule("mining");
+      if(ctx && ctx.suggestQuery){
+        $("#miningQueryInput").value = ctx.suggestQuery;
+        runMiningQuery(ctx.suggestQuery);
+      }
+    });
+  }
+
+  function renderNotifications(){
+    const unread = MINEX_DATA.notifications.filter(n=>n.unread).length;
+    $("#notifBadge").hidden = unread === 0;
+    $("#notifBadge").textContent = unread;
+    $("#notifList").innerHTML = MINEX_DATA.notifications.map(n => `
+      <div class="notif-item ${n.unread?'unread':''}">
+        <div class="notif-icon">${n.icon}</div>
+        <div>
+          <div class="notif-text">${n.text}</div>
+          <div class="notif-time">${n.time}</div>
+        </div>
+      </div>`).join("") || `<div class="notif-empty">No notifications.</div>`;
+  }
+
+  function switchModule(mod){
+    state.currentModule = mod;
+    $$(".nav-item").forEach(b=>b.classList.toggle("active", b.dataset.module===mod));
+    const map = {
+      command:"moduleCommand", docintel:"moduleDocIntel", mining:"moduleMining",
+      trust:"moduleTrust", historical:"moduleHistorical", report:"moduleReport"
+    };
+    Object.values(map).forEach(id => { const el = document.getElementById(id); if(el) el.hidden = true; });
+    document.getElementById(map[mod]).hidden = false;
+
+    const labels = {
+      command:"Command Center", docintel:"Document Intelligence", mining:"Mining Intelligence",
+      trust:"Data Trust Center", historical:"Historical Intelligence", report:"AI Report Studio"
+    };
+    $("#crumbModule").textContent = labels[mod];
+    window.scrollTo({top:0, behavior:"smooth"});
+
+    if(mod==="command") renderCommandCenter();
+    if(mod==="docintel" && !$("#repoWrap").dataset.built) renderDocIntel();
+    if(mod==="mining" && !$("#miningSuggested").dataset.built) renderMiningIntel();
+    if(mod==="trust") renderTrustCenter();
+    if(mod==="historical") renderHistorical();
+    if(mod==="report") renderReportStudio();
+  }
+
+  /* ============================================================
+     EVIDENCE DRAWER (shared by all modules)
+     ============================================================ */
+  function openEvidenceDrawer(ctx){
+    // ctx: {title, sub, snippet, confidence, status, sourceType, recordId, method, indexed, suggestQuery}
+    state.evidenceContext = ctx;
+    $("#drawerTitle").textContent = ctx.title;
+    $("#drawerSub").textContent = ctx.sub;
+    $("#drawerSnippet").innerHTML = ctx.snippetHtml || escapeHtml(ctx.snippet||"");
+    $("#factConfidence").textContent = ctx.confidence!=null ? ctx.confidence+"%" : "—";
+    $("#factStatus").textContent = statusLabel(ctx.status||"review");
+    $("#factSource").textContent = ctx.sourceType || "—";
+    $("#techRecord").textContent = ctx.recordId || "—";
+    $("#techMethod").textContent = ctx.method || "Text + table extraction (OCR fallback)";
+    $("#techIndexed").textContent = ctx.indexed || "—";
+    $("#techPanel").classList.remove("open");
+    $("#techToggle").textContent = "Show technical details";
+    $("#overlay").classList.add("open");
+  }
+  function closeEvidenceDrawer(){ $("#overlay").classList.remove("open"); }
+
+  function resolveEvidenceStatus(newStatus){
+    const ctx = state.evidenceContext;
+    if(!ctx){ closeEvidenceDrawer(); return; }
+    if(ctx.docId){
+      const doc = MINEX_DATA.documents.find(d=>d.id===ctx.docId);
+      if(doc) doc.status = newStatus;
     }
-  });
+    toast(newStatus==="verified" ? "Marked verified." : "Flagged for human review.");
+    closeEvidenceDrawer();
+    if(state.currentModule==="docintel") renderRepo();
+    if(state.currentModule==="trust") renderTrustCenter();
+  }
 
-  // Settings / account drawer
-  $("avatarBtn").onclick = () => $("settingsOverlay").classList.add("open");
-  $("settingsClose").onclick = () => $("settingsOverlay").classList.remove("open");
-  $("settingsOverlay").addEventListener("click", (e) => {
-    if(e.target.id === "settingsOverlay") $("settingsOverlay").classList.remove("open");
-  });
-  $("logoutBtn").onclick = handleLogout;
-  $("langSelect").addEventListener("change", (e) => {
-    showToast("Interface language set to " + e.target.value + ".");
-  });
+  /* ============================================================
+     COMMAND CENTER
+     ============================================================ */
+  function renderCommandCenter(){
+    const h = MINEX_DATA.historical[MINEX_DATA.historical.length-1];
+    const verifiedCount = MINEX_DATA.documents.filter(d=>d.status==="verified").length;
+    const conflictCount = MINEX_DATA.conflicts.filter(c=>state.conflictStatus[c.id]==="unresolved").length;
 
-  // Module nav (Command Center / Mining Intelligence / Data Trust Center / Historical Intelligence / AI Report Studio)
-  document.querySelectorAll(".nav-item").forEach(btn => {
-    btn.onclick = () => setModule(btn.dataset.module);
-  });
-  $("comingSoonBack").onclick = () => setModule("docintel");
+    const cards = [
+      { mod:"docintel", num:"01", title:"Document Intelligence", desc:"Search, extract and verify mining records across every uploaded document.",
+        kpi: MINEX_DATA.documents.length, kpiLabel:"documents indexed" },
+      { mod:"mining", num:"02", title:"Mining Intelligence", desc:"Ask a question in plain language and get an answer grounded in evidence.",
+        kpi: h.production+" MT", kpiLabel:"latest production (2025)" },
+      { mod:"trust", num:"03", title:"Data Trust Center", desc:"Every conflict MINEX finds, with both sources shown side by side.",
+        kpi: conflictCount, kpiLabel:"unresolved conflicts", statusClass: conflictCount? "status flagged":"status verified", statusText: conflictCount? "Needs review":"All clear" },
+      { mod:"historical", num:"04", title:"Historical Intelligence", desc:"A connected 2020–2025 dataset across production, safety and quality.",
+        kpi:"6 yrs", kpiLabel:"of tracked history" },
+      { mod:"report", num:"05", title:"AI Report Studio", desc:"Generate a sourced report from verified records, then version it.",
+        kpi: state.reportVersions.length, kpiLabel:"saved versions" }
+    ];
 
-  // Upload — Browse opens the real file picker, Upload runs the pipeline on what's selected
-  $("browseBtn").onclick = () => $("fileInput").click();
-  $("fileInput").addEventListener("change", (e) => {
-    pendingFiles = Array.from(e.target.files);
-    renderSelectedFiles();
-    if(pendingFiles.length){
-      showToast(pendingFiles.length + " file" + (pendingFiles.length === 1 ? "" : "s") + " ready — click Upload documents to process.");
+    $("#ccGrid").innerHTML = cards.map(c => `
+      <button class="cc-card" data-goto="${c.mod}">
+        <div class="cc-card-top">
+          <div><div class="cc-card-num">${c.num}</div><div class="cc-card-title">${c.title}</div></div>
+          ${c.statusText ? `<span class="cc-card-status ${c.statusClass}">${c.statusText}</span>` : ""}
+        </div>
+        <div class="cc-card-desc">${c.desc}</div>
+        <div><div class="cc-card-kpi">${c.kpi}</div><div class="cc-card-kpi-label">${c.kpiLabel}</div></div>
+      </button>`).join("");
+
+    $$("#ccGrid [data-goto]").forEach(b=>b.addEventListener("click", ()=>switchModule(b.dataset.goto)));
+    $("#docCount").textContent = MINEX_DATA.documents.reduce((s,d)=>s+d.records,0).toLocaleString();
+  }
+
+  /* ============================================================
+     DOCUMENT INTELLIGENCE
+     ============================================================ */
+  function renderDocIntel(){
+    $("#repoWrap").dataset.built = "1";
+
+    $("#browseBtn").addEventListener("click", ()=>$("#fileInput").click());
+    $("#fileInput").addEventListener("change", onFilesSelected);
+    $("#uploadBtn").addEventListener("click", startIngestPipeline);
+
+    $("#searchInput").addEventListener("input", runDocSearch);
+    $$("#filterRow .chip").forEach(chip=>{
+      chip.addEventListener("click", ()=>{
+        $$("#filterRow .chip").forEach(c=>c.classList.remove("on"));
+        chip.classList.add("on");
+        runDocSearch();
+      });
+    });
+
+    renderRepo();
+    runDocSearch();
+  }
+
+  function onFilesSelected(){
+    const files = Array.from($("#fileInput").files);
+    const box = $("#selectedFiles");
+    if(!files.length){ box.hidden = true; return; }
+    box.hidden = false;
+    box.textContent = files.length===1 ? `Selected: ${files[0].name}` : `Selected ${files.length} files: ${files.map(f=>f.name).join(", ")}`;
+  }
+
+  function startIngestPipeline(){
+    const files = Array.from($("#fileInput").files);
+    const fileName = files.length ? files[0].name : "New_Mining_Record.pdf";
+    if(files.length > 1) toast(`Queued ${files.length} files — processing ${fileName} first.`);
+
+    const card = $("#pipelineCard");
+    card.hidden = false;
+    $("#pipelineFileName").textContent = "Processing " + fileName;
+    const steps = [$("#step1"), $("#step2"), $("#step3"), $("#step4")];
+    steps.forEach(s=>{ s.classList.remove("active","done"); s.querySelector(".step-state").textContent = "Pending"; });
+
+    const labels = ["Uploading…","Extracting text & tables…","Structuring records…","Ready to search"];
+    let i = 0;
+    $("#pipelineJob").textContent = labels[0];
+
+    function tick(){
+      if(i>0){ steps[i-1].classList.remove("active"); steps[i-1].classList.add("done"); steps[i-1].querySelector(".step-state").textContent = "Complete"; }
+      if(i < steps.length){
+        steps[i].classList.add("active");
+        steps[i].querySelector(".step-state").textContent = "Processing…";
+        $("#pipelineJob").textContent = labels[i];
+        i++;
+        setTimeout(tick, 850);
+      } else {
+        $("#pipelineJob").textContent = "Ready to search";
+        toast(`${fileName} processed — added to the repository (synthetic demo extraction).`);
+        const newDoc = {
+          id:"D-" + (2000 + MINEX_DATA.documents.length),
+          name: fileName.replace(/\.[a-z0-9]+$/i,""), type: guessType(fileName),
+          year: new Date().getFullYear(), mine:"CMPDI — Talcher", pages: 12 + Math.floor(Math.random()*40),
+          records: 20 + Math.floor(Math.random()*80), topics:["Coal Production"], confidence: 85 + Math.floor(Math.random()*10),
+          status:"review", uploadedDate: new Date().toISOString().slice(0,10)
+        };
+        MINEX_DATA.documents.push(newDoc);
+        renderRepo();
+        $("#fileInput").value = "";
+        $("#selectedFiles").hidden = true;
+      }
     }
-  });
-  $("uploadBtn").onclick = () => {
-    if(pendingFiles.length === 0){
-      showToast("Browse and select files first, then click Upload documents.");
+    tick();
+  }
+  function guessType(name){
+    const ext = (name.split(".").pop()||"").toLowerCase();
+    if(["xls","xlsx","csv"].includes(ext)) return "excel";
+    if(["png","jpg","jpeg","tif","tiff"].includes(ext)) return "scan";
+    return "pdf";
+  }
+
+  function runDocSearch(){
+    const q = $("#searchInput").value.trim().toLowerCase();
+    const filter = $("#filterRow .chip.on")?.dataset.filter || "all";
+    let matches = [];
+
+    MINEX_DATA.documents.forEach(doc=>{
+      if(filter !== "all" && doc.type !== filter) return;
+      const hay = (doc.name + " " + doc.topics.join(" ") + " " + doc.mine).toLowerCase();
+      if(!q || hay.includes(q) || doc.topics.some(t=>t.toLowerCase().includes(q))){
+        matches.push(doc);
+      }
+    });
+
+    $("#resultCount").innerHTML = q ? `<b>${matches.length}</b> result${matches.length!==1?'s':''} for "${escapeHtml($("#searchInput").value)}"` : `<b>${matches.length}</b> documents`;
+
+    if(!matches.length){
+      $("#resultsWrap").innerHTML = `<div class="empty-state">No matches. Try a different term or format filter.</div>`;
       return;
     }
-    const files = pendingFiles.slice();
-    pendingFiles = [];
-    renderSelectedFiles();
-    $("fileInput").value = "";
-    runUploadPipeline(files);
-  };
 
-  // Evidence drawer
-  $("drawerClose").onclick = () => $("overlay").classList.remove("open");
-  $("overlay").addEventListener("click", (e) => {
-    if(e.target.id === "overlay") $("overlay").classList.remove("open");
-  });
-  $("techToggle").onclick = () => {
-    const open = $("techPanel").classList.toggle("open");
-    $("techToggle").textContent = open ? "Hide technical details" : "Show technical details";
-  };
-  $("handoffBtn").onclick = () => {
-    if(!currentDrawer) return;
-    const term = currentDrawer.term || currentDrawer.doc.title;
-    $("overlay").classList.remove("open");
-    setModule("mining");
-    showToast('Opening "' + term + '" in Mining Intelligence, scoped to ' + currentDrawer.doc.title);
-  };
+    $("#resultsWrap").innerHTML = matches.map(doc => {
+      const snippet = `…${doc.mine} reports ${doc.topics[0].toLowerCase()} figures across ${doc.pages} pages, extracted at ${doc.confidence}% confidence…`;
+      return `
+      <div class="result">
+        <div class="result-top">
+          <div>
+            <div class="result-title">${escapeHtml(doc.name)}</div>
+            <div class="result-meta">${doc.mine} · ${doc.year} · ${doc.type.toUpperCase()}</div>
+          </div>
+          <div class="result-loc">Page ${1+Math.floor(Math.random()*doc.pages)}</div>
+        </div>
+        <div class="result-snippet">${highlight(snippet, q)}</div>
+        <div class="result-matchcount">${doc.records} extracted records</div>
+        <div class="result-bottom">
+          <div class="result-confidence">Confidence: ${doc.confidence}%</div>
+          <div class="result-actions">
+            <button class="link-btn" data-view="${doc.id}">View Evidence</button>
+          </div>
+        </div>
+      </div>`;
+    }).join("");
 
-  // Search
-  $("searchInput").addEventListener("input", renderResults);
-  $("filterRow").addEventListener("click", (e) => {
-    if(e.target.dataset.filter){
-      activeFilter = e.target.dataset.filter;
-      document.querySelectorAll(".chip").forEach(c => c.classList.remove("on"));
-      e.target.classList.add("on");
-      renderResults();
+    $$("#resultsWrap [data-view]").forEach(btn=>{
+      btn.addEventListener("click", ()=>{
+        const doc = MINEX_DATA.documents.find(d=>d.id===btn.dataset.view);
+        openEvidenceDrawer({
+          title: doc.name, sub: `${doc.mine} · ${doc.year}`,
+          snippet: `${doc.mine} reports ${doc.topics[0].toLowerCase()} figures across ${doc.pages} pages of ${doc.name.toLowerCase()}.`,
+          confidence: doc.confidence, status: doc.status, sourceType: doc.type.toUpperCase(),
+          docId: doc.id, recordId: doc.id, indexed: doc.uploadedDate,
+          suggestQuery: `Show reports related to ${doc.topics[0].toLowerCase()}.`
+        });
+      });
+    });
+  }
+
+  function renderRepo(){
+    $("#repoWrap").innerHTML = MINEX_DATA.documents.map(doc => `
+      <div class="doc-row">
+        <div class="doc-row-top">
+          <div>
+            <div class="doc-name">${escapeHtml(doc.name)}</div>
+            <div class="doc-sub">${doc.mine} · ${doc.pages} pages · ${doc.records} records</div>
+          </div>
+          <div class="doc-date">${doc.uploadedDate}</div>
+        </div>
+        <div class="tag-row">
+          <span class="tag status ${doc.status}">${statusLabel(doc.status)}</span>
+          ${doc.topics.map(t=>`<span class="tag">${escapeHtml(t)}</span>`).join("")}
+        </div>
+        <div class="doc-actions">
+          <button class="link-btn" data-repo-evidence="${doc.id}">View Evidence</button>
+          <button class="link-btn result-secondary" data-repo-analyze="${doc.id}">Analyze in Mining Intelligence</button>
+        </div>
+      </div>`).join("");
+
+    $$("#repoWrap [data-repo-evidence]").forEach(btn=>{
+      btn.addEventListener("click", ()=>{
+        const doc = MINEX_DATA.documents.find(d=>d.id===btn.dataset.repoEvidence);
+        openEvidenceDrawer({
+          title: doc.name, sub:`${doc.mine} · ${doc.year}`,
+          snippet:`${doc.records} structured records extracted from ${doc.pages} pages.`,
+          confidence: doc.confidence, status: doc.status, sourceType: doc.type.toUpperCase(),
+          docId: doc.id, recordId: doc.id, indexed: doc.uploadedDate,
+          suggestQuery:`Show reports related to ${doc.topics[0].toLowerCase()}.`
+        });
+      });
+    });
+    $$("#repoWrap [data-repo-analyze]").forEach(btn=>{
+      btn.addEventListener("click", ()=>{
+        const doc = MINEX_DATA.documents.find(d=>d.id===btn.dataset.repoAnalyze);
+        switchModule("mining");
+        const q = `Show reports related to ${doc.topics[0].toLowerCase()}.`;
+        $("#miningQueryInput").value = q;
+        runMiningQuery(q);
+      });
+    });
+  }
+
+  /* ============================================================
+     MINING INTELLIGENCE — Ask MINEX
+     ============================================================ */
+  function renderMiningIntel(){
+    $("#miningSuggested").dataset.built = "1";
+    $("#miningSuggested").innerHTML = MINEX_DATA.suggestedQueries.map(q=>`<button class="chip" data-q="${escapeHtml(q)}">${escapeHtml(q)}</button>`).join("");
+    $$("#miningSuggested .chip").forEach(c=>c.addEventListener("click", ()=>{
+      $("#miningQueryInput").value = c.dataset.q;
+      runMiningQuery(c.dataset.q);
+    }));
+
+    $("#miningAskBtn").addEventListener("click", ()=>runMiningQuery($("#miningQueryInput").value));
+    $("#miningQueryInput").addEventListener("keydown", e=>{ if(e.key==="Enter") runMiningQuery($("#miningQueryInput").value); });
+    $("#miningVoiceBtn").addEventListener("click", ()=>toast("Voice query isn't wired to a microphone in this prototype — type your question instead."));
+  }
+
+  function pushRecentQuery(q){
+    state.miningRecent = [q, ...state.miningRecent.filter(x=>x!==q)].slice(0,5);
+    $("#miningRecent").hidden = state.miningRecent.length===0;
+    $("#miningRecentList").innerHTML = state.miningRecent.map(q=>`<button class="chip" data-rq="${escapeHtml(q)}">${escapeHtml(q)}</button>`).join("");
+    $$("#miningRecentList [data-rq]").forEach(c=>c.addEventListener("click", ()=>{ $("#miningQueryInput").value = c.dataset.rq; runMiningQuery(c.dataset.rq); }));
+  }
+
+  function runMiningQuery(rawQ){
+    const q = (rawQ||"").trim();
+    if(!q){ toast("Type a question first."); return; }
+    pushRecentQuery(q);
+    const lower = q.toLowerCase();
+    const H = MINEX_DATA.historical;
+
+    let payload;
+    if(lower.includes("conflict")){
+      payload = buildConflictAnswer();
+    } else if(lower.includes("highest")){
+      const top = H.reduce((a,b)=>b.production>a.production?b:a);
+      payload = { answer:`Coal production reached its highest recorded value in ${top.year}, at ${top.production} MT.`,
+        figures:[{label:top.year, value:top.production+" MT"}], chartMetric:"production",
+        docYear: top.year, sources:[minexFindSourceDoc("production", top.year)], confidence:95 };
+    } else if(lower.includes("target") && lower.includes("actual")){
+      const last = H[H.length-1];
+      const diff = (last.production - last.target).toFixed(1);
+      payload = { answer:`In ${last.year}, actual coal production was ${last.production} MT against a target of ${last.target} MT — a variance of ${diff>0?'+':''}${diff} MT.`,
+        figures:[{label:"Actual", value:last.production+" MT"},{label:"Target", value:last.target+" MT"},{label:"Variance", value:(diff>0?'+':'')+diff+" MT"}],
+        chartMetric:"target", docYear:last.year, sources:[minexFindSourceDoc("target", last.year)], confidence:92 };
+    } else if(lower.includes("compare") || (lower.match(/\b(19|20)\d{2}\b/g)||[]).length>=2){
+      const years = (lower.match(/\b(19|20)\d{2}\b/g)||[]).map(Number);
+      const y1 = H.find(h=>h.year===years[0]) || H[0];
+      const y2 = H.find(h=>h.year===years[1]) || H[H.length-1];
+      const pct = (((y2.production-y1.production)/y1.production)*100).toFixed(1);
+      payload = { answer:`Coal production moved from ${y1.production} MT in ${y1.year} to ${y2.production} MT in ${y2.year}, a change of ${pct}%.`,
+        figures:[{label:y1.year, value:y1.production+" MT"},{label:y2.year, value:y2.production+" MT"},{label:"Change", value:pct+"%"}],
+        chartMetric:"production", docYear:y2.year, sources:[minexFindSourceDoc("production", y1.year), minexFindSourceDoc("production", y2.year)], confidence:93 };
+    } else if(lower.includes("seam")){
+      const doc = MINEX_DATA.documents.find(d=>d.topics.includes("Seam Thickness"));
+      payload = { answer:`One report in the repository discusses seam thickness in detail: ${doc.name} (${doc.mine}, ${doc.year}).`,
+        figures:[], chartMetric:null, sources:[doc], confidence:doc.confidence, related:"seam thickness" };
+    } else if(lower.includes("production") || lower.includes("2020") || lower.includes("2025")){
+      payload = { answer:`Coal production rose from ${H[0].production} MT in ${H[0].year} to ${H[H.length-1].production} MT in ${H[H.length-1].year}, a ${(((H[H.length-1].production-H[0].production)/H[0].production)*100).toFixed(1)}% increase over the period.`,
+        figures: H.map(h=>({label:h.year, value:h.production+" MT"})), chartMetric:"production",
+        docYear:H[H.length-1].year, sources:[minexFindSourceDoc("production", H[H.length-1].year)], confidence:94 };
+    } else {
+      payload = { answer:`MINEX couldn't find a confident answer for that question in the current dataset. Try one of the suggested questions, or rephrase using a metric name (production, target, overburden, dispatch, safety, quality).`,
+        figures:[], chartMetric:null, sources:[], confidence:40, needsReview:true };
     }
+
+    renderMiningAnswer(q, payload);
+  }
+
+  function buildConflictAnswer(){
+    const c = MINEX_DATA.conflicts[0];
+    return {
+      answer:`MINEX found conflicting values for ${c.metric} in ${c.year}: ${c.sourceA.doc} reports ${c.sourceA.value} ${c.sourceA.unit}, while ${c.sourceB.doc} reports ${c.sourceB.value} ${c.sourceB.unit}.`,
+      figures:[{label:c.sourceA.doc.split(" ")[0], value:c.sourceA.value+" "+c.sourceA.unit},{label:c.sourceB.doc.split(" ")[0], value:c.sourceB.value+" "+c.sourceB.unit}],
+      chartMetric:"production", docYear:c.year,
+      sources:[MINEX_DATA.documents.find(d=>d.id===c.sourceA.docId), MINEX_DATA.documents.find(d=>d.id===c.sourceB.docId)],
+      confidence:60, isConflict:true, conflictId:c.id
+    };
+  }
+
+  function renderMiningAnswer(q, p){
+    const confClass = p.confidence>=85?"high":p.confidence>=65?"medium":"low";
+    const chartId = "miAnswerChart" + Date.now();
+
+    const html = `
+      <div class="answer-card">
+        <div class="answer-q">Asked: "${escapeHtml(q)}"</div>
+        <div class="answer-section">
+          <div class="answer-label">Answer</div>
+          <div class="answer-text">${escapeHtml(p.answer)}</div>
+          ${p.isConflict ? `<div class="needs-review-banner">⚠ Conflict detected — resolve in Data Trust Center before reporting this figure.</div>` : ""}
+          ${p.needsReview ? `<div class="needs-review-banner">Needs review — insufficient evidence for a confident answer.</div>` : ""}
+        </div>
+        ${p.figures.length ? `
+        <div class="answer-section">
+          <div class="answer-label">Key figures</div>
+          <div class="key-figures">${p.figures.map(f=>`<div class="key-figure"><b>${escapeHtml(String(f.value))}</b><span>${escapeHtml(String(f.label))}</span></div>`).join("")}</div>
+        </div>`: ""}
+        ${p.chartMetric ? `
+        <div class="answer-section">
+          <div class="answer-label">Trend</div>
+          <div class="chart-card"><canvas id="${chartId}" height="160"></canvas></div>
+        </div>` : ""}
+        ${p.sources.length ? `
+        <div class="answer-section">
+          <div class="answer-label">Source documents &amp; evidence</div>
+          ${p.sources.map(s=>`<div class="source-item"><span>${escapeHtml(s.name)} · ${s.mine}</span><button class="link-btn" data-mi-evidence="${s.id}">Open Evidence</button></div>`).join("")}
+        </div>`:""}
+        <div class="answer-section">
+          <div class="answer-label">Confidence</div>
+          <span class="confidence-pill ${confClass}">${p.confidence}% confidence</span>
+        </div>
+        ${p.isConflict ? `
+        <div class="answer-section">
+          <div class="answer-label">Related information</div>
+          <button class="link-btn" data-goto-trust="1">Resolve this conflict in Data Trust Center →</button>
+        </div>`:""}
+      </div>`;
+
+    $("#miningAnswerWrap").innerHTML = html + $("#miningAnswerWrap").innerHTML;
+
+    if(p.chartMetric){
+      const meta = MINEX_DATA.metricMeta[p.chartMetric];
+      const H = MINEX_DATA.historical;
+      new Chart(document.getElementById(chartId), {
+        type:"line",
+        data:{ labels:H.map(h=>h.year), datasets:[{ label:meta.label+" ("+meta.unit+")", data:H.map(h=>h[p.chartMetric]), borderColor:meta.color, backgroundColor:meta.color+"33", tension:0.3, fill:true }]},
+        options:{ plugins:{legend:{display:false}}, scales:{ y:{ beginAtZero:false } } }
+      });
+    }
+
+    $$("[data-mi-evidence]").forEach(btn=>{
+      btn.addEventListener("click", ()=>{
+        const doc = MINEX_DATA.documents.find(d=>d.id===btn.dataset.miEvidence);
+        openEvidenceDrawer({
+          title: doc.name, sub:`${doc.mine} · ${doc.year}`,
+          snippet:`Referenced by Mining Intelligence in answer to: "${q}"`,
+          confidence: doc.confidence, status: doc.status, sourceType: doc.type.toUpperCase(),
+          docId: doc.id, recordId: doc.id, indexed: doc.uploadedDate
+        });
+      });
+    });
+    $$("[data-goto-trust]").forEach(btn=>btn.addEventListener("click", ()=>switchModule("trust")));
+  }
+
+  /* ============================================================
+     DATA TRUST CENTER
+     ============================================================ */
+  function renderTrustCenter(){
+    const verified = MINEX_DATA.documents.filter(d=>d.status==="verified").length;
+    const review = MINEX_DATA.documents.filter(d=>d.status==="review").length;
+    const flagged = MINEX_DATA.documents.filter(d=>d.status==="flagged").length;
+    const conflicts = MINEX_DATA.conflicts.filter(c=>state.conflictStatus[c.id]==="unresolved").length;
+
+    $("#trustSummary").innerHTML = `
+      <div class="stat-tile verified"><b>${verified}</b><span>Verified documents</span></div>
+      <div class="stat-tile review"><b>${review}</b><span>Needs review</span></div>
+      <div class="stat-tile flagged"><b>${flagged}</b><span>Flagged</span></div>
+      <div class="stat-tile ${conflicts?'flagged':'verified'}"><b>${conflicts}</b><span>Unresolved conflicts</span></div>`;
+
+    $("#conflictsWrap").innerHTML = MINEX_DATA.conflicts.map(renderConflictCard).join("") || `<div class="empty-state">No conflicts detected.</div>`;
+    wireConflictButtons();
+
+    // simple data-quality checks derived from the dataset (duplicates / missing / unit checks)
+    const checks = [
+      { title:"Duplicate detection", detail: MINEX_DATA.documents.length>1 ? "No exact duplicate documents found." : "Not enough documents to compare.", ok:true },
+      { title:"Missing values", detail: `${MINEX_DATA.documents.filter(d=>!d.topics.length).length} documents missing topic tags.`, ok: MINEX_DATA.documents.every(d=>d.topics.length) },
+      { title:"Unit consistency", detail:"Production figures consistently reported in MT across sources.", ok:true },
+      { title:"Low-confidence extractions", detail: `${MINEX_DATA.documents.filter(d=>d.confidence<90).length} document(s) below 90% extraction confidence.`, ok: MINEX_DATA.documents.every(d=>d.confidence>=90) }
+    ];
+    $("#qualityWrap").innerHTML = checks.map(c=>`
+      <div class="stat-tile ${c.ok?'verified':'review'}">
+        <b style="font-size:14px;">${c.ok?'✓':'!'}</b>
+        <span style="display:block;font-weight:600;color:var(--ink);margin-bottom:4px;">${c.title}</span>
+        <span>${c.detail}</span>
+      </div>`).join("");
+  }
+
+  function renderConflictCard(c){
+    const status = state.conflictStatus[c.id];
+    const diff = (c.sourceB.value - c.sourceA.value).toFixed(1);
+    let resolvedNote = "";
+    if(status==="a_verified") resolvedNote = `<div class="conflict-resolved">✓ Resolved — ${c.sourceA.doc} marked as the verified source.</div>`;
+    if(status==="b_verified") resolvedNote = `<div class="conflict-resolved">✓ Resolved — ${c.sourceB.doc} marked as the verified source.</div>`;
+    if(status==="needs_review") resolvedNote = `<div class="conflict-resolved" style="background:var(--review-wash);color:var(--review);">↻ Sent for human review.</div>`;
+
+    return `
+    <div class="conflict-card" data-conflict="${c.id}">
+      <div class="conflict-badge">Conflict detected</div>
+      <div style="font-size:13.5px;font-weight:600;margin-bottom:6px;">${c.metric} — ${c.year}</div>
+      <div class="conflict-sources">
+        <div class="conflict-source">
+          <b>Source A</b>
+          <div class="val">${c.sourceA.value} ${c.sourceA.unit}</div>
+          <div class="meta">${c.sourceA.doc} · Page ${c.sourceA.page} · ${c.sourceA.date}</div>
+        </div>
+        <div class="conflict-source">
+          <b>Source B</b>
+          <div class="val">${c.sourceB.value} ${c.sourceB.unit}</div>
+          <div class="meta">${c.sourceB.doc} · Page ${c.sourceB.page} · ${c.sourceB.date}</div>
+        </div>
+      </div>
+      <div class="conflict-diff">Difference: ${diff} ${c.sourceA.unit} (${((diff/c.sourceA.value)*100).toFixed(1)}%) · Confidence: 60%</div>
+      ${resolvedNote}
+      ${!status || status==="unresolved" ? `
+      <div class="conflict-actions">
+        <button class="btn btn-verified" data-resolve="${c.id}" data-choice="a_verified">Mark Source A Verified</button>
+        <button class="btn btn-verified" data-resolve="${c.id}" data-choice="b_verified">Mark Source B Verified</button>
+        <button class="btn btn-review" data-resolve="${c.id}" data-choice="needs_review">Needs Human Review</button>
+      </div>` : `<div class="conflict-actions"><button class="btn" data-resolve="${c.id}" data-choice="unresolved">Reopen</button></div>`}
+      <div class="conflict-footer">MINEX identifies the conflict. Final verification remains with the authorized human expert.</div>
+    </div>`;
+  }
+
+  function wireConflictButtons(){
+    $$("[data-resolve]").forEach(btn=>{
+      btn.addEventListener("click", ()=>{
+        state.conflictStatus[btn.dataset.resolve] = btn.dataset.choice;
+        const c = MINEX_DATA.conflicts.find(x=>x.id===btn.dataset.resolve);
+        if(btn.dataset.choice==="a_verified") MINEX_DATA.documents.find(d=>d.id===c.sourceA.docId).status="verified";
+        if(btn.dataset.choice==="b_verified") MINEX_DATA.documents.find(d=>d.id===c.sourceB.docId).status="verified";
+        toast(btn.dataset.choice==="needs_review" ? "Sent for human review." : "Marked verified.");
+        renderTrustCenter();
+      });
+    });
+  }
+
+  /* ============================================================
+     HISTORICAL INTELLIGENCE
+     ============================================================ */
+  function renderHistorical(){
+    const H = MINEX_DATA.historical;
+    const yearOptions = H.map(h=>`<option value="${h.year}">${h.year}</option>`).join("");
+    if(!$("#histFrom").dataset.built){
+      $("#histFrom").dataset.built = "1";
+      $("#histFrom").innerHTML = yearOptions;
+      $("#histTo").innerHTML = yearOptions;
+      $("#histFrom").value = H[0].year;
+      $("#histTo").value = H[H.length-1].year;
+      $("#histMetric").addEventListener("change", updateHistorical);
+      $("#histFrom").addEventListener("change", updateHistorical);
+      $("#histTo").addEventListener("change", updateHistorical);
+    }
+    updateHistorical();
+  }
+
+  function updateHistorical(){
+    const metric = $("#histMetric").value;
+    let from = parseInt($("#histFrom").value), to = parseInt($("#histTo").value);
+    if(from > to){ [from, to] = [to, from]; }
+    const meta = MINEX_DATA.metricMeta[metric];
+    const rows = MINEX_DATA.historical.filter(h => h.year>=from && h.year<=to);
+
+    const values = rows.map(r=>r[metric]);
+    const highest = rows.reduce((a,b)=>b[metric]>a[metric]?b:a);
+    const lowest = rows.reduce((a,b)=>b[metric]<a[metric]?b:a);
+    const avg = (values.reduce((s,v)=>s+v,0)/values.length).toFixed(1);
+    const pctChange = rows.length>1 ? (((rows[rows.length-1][metric]-rows[0][metric])/rows[0][metric])*100).toFixed(1) : "0.0";
+    const trendUp = rows.length>1 && rows[rows.length-1][metric] >= rows[0][metric];
+
+    $("#histKpis").innerHTML = `
+      <div class="stat-tile"><b>${highest[metric]} ${meta.unit}</b><span>Highest (${highest.year})</span></div>
+      <div class="stat-tile"><b>${lowest[metric]} ${meta.unit}</b><span>Lowest (${lowest.year})</span></div>
+      <div class="stat-tile"><b>${avg} ${meta.unit}</b><span>Average</span></div>
+      <div class="stat-tile ${trendUp?'verified':'flagged'}"><b>${pctChange>=0?'+':''}${pctChange}%</b><span>Change, ${from}–${to}</span></div>`;
+
+    const ctx = document.getElementById("histChart");
+    if(state.histChartInstance) state.histChartInstance.destroy();
+    state.histChartInstance = new Chart(ctx, {
+      type:"line",
+      data:{ labels: rows.map(r=>r.year),
+        datasets: metric==="production" ? [
+          { label:`${meta.label} (${meta.unit})`, data: rows.map(r=>r.production), borderColor: meta.color, backgroundColor: meta.color+"33", tension:0.3, fill:true },
+          { label:`Target (${meta.unit})`, data: rows.map(r=>r.target), borderColor:"#A8781E", borderDash:[6,4], tension:0.3, fill:false }
+        ] : [{ label:`${meta.label} (${meta.unit})`, data: rows.map(r=>r[metric]), borderColor: meta.color, backgroundColor: meta.color+"33", tension:0.3, fill:true }]
+      },
+      options:{ plugins:{legend:{display: metric==="production"}}, scales:{ y:{ beginAtZero:false } } }
+    });
+
+    const dir = trendUp ? "increased" : "decreased";
+    let insight = `${meta.label} ${dir} by ${Math.abs(pctChange)}% between ${from} and ${to}. ${meta.label} reached its highest value in ${highest.year}`;
+    if(metric==="production"){
+      const last = rows[rows.length-1];
+      insight += last.production < last.target ? `, while actual production in ${last.year} remained below the ${last.target} ${meta.unit} target.` : `, meeting or exceeding the ${last.year} target of ${last.target} ${meta.unit}.`;
+    } else {
+      insight += ".";
+    }
+    $("#histInsight").textContent = insight;
+
+    $("#histTable").innerHTML = rows.map(r=>{
+      const doc = minexFindSourceDoc(metric, r.year);
+      return `<div class="hist-row">
+        <div class="yr">${r.year}</div>
+        <div class="v">${r[metric]} ${meta.unit}</div>
+        <div class="src"><button class="link-btn" data-hist-src="${doc.id}" data-hist-year="${r.year}">${doc.name}</button> · ${statusLabel(doc.status)}</div>
+      </div>`;
+    }).join("");
+
+    $$("[data-hist-src]").forEach(btn=>{
+      btn.addEventListener("click", ()=>{
+        const doc = MINEX_DATA.documents.find(d=>d.id===btn.dataset.histSrc);
+        openEvidenceDrawer({
+          title: doc.name, sub:`${doc.mine} · ${btn.dataset.histYear}`,
+          snippet:`Source for ${meta.label} in ${btn.dataset.histYear}, used in Historical Intelligence.`,
+          confidence: doc.confidence, status: doc.status, sourceType: doc.type.toUpperCase(),
+          docId: doc.id, recordId: doc.id, indexed: doc.uploadedDate
+        });
+      });
+    });
+  }
+
+  /* ============================================================
+     AI REPORT STUDIO
+     ============================================================ */
+  function renderReportStudio(){
+    if(!$("#reportYears").dataset.built){
+      $("#reportYears").dataset.built = "1";
+      $("#reportYears").innerHTML = MINEX_DATA.historical.map(h=>`<label class="checkbox-row"><input type="checkbox" value="${h.year}" class="rpt-year" checked> ${h.year}</label>`).join("");
+      $("#reportMetrics").innerHTML = Object.entries(MINEX_DATA.metricMeta).map(([k,m])=>`<label class="checkbox-row"><input type="checkbox" value="${k}" class="rpt-metric" ${k==='production'||k==='target'?'checked':''}> ${m.label}</label>`).join("");
+      $("#generateReportBtn").addEventListener("click", generateReport);
+    }
+  }
+
+  function generateReport(){
+    const years = $$(".rpt-year:checked").map(c=>parseInt(c.value)).sort();
+    const metrics = $$(".rpt-metric:checked").map(c=>c.value);
+    const includeConflicts = $("#reportIncludeConflicts").checked;
+    const includeSources = $("#reportIncludeSources").checked;
+
+    if(!years.length || !metrics.length){ toast("Select at least one year and one metric."); return; }
+
+    const rows = MINEX_DATA.historical.filter(h=>years.includes(h.year));
+    const first = rows[0], last = rows[rows.length-1];
+    const pctChange = (((last.production-first.production)/first.production)*100).toFixed(1);
+    const conflict = MINEX_DATA.conflicts.find(c=>years.includes(c.year));
+
+    const html = `
+      <div class="report-preview" id="reportPreview">
+        <h3>MINEX Mining Intelligence Report</h3>
+        <div class="rp-sub">Covering ${first.year}–${last.year} · Generated ${new Date().toLocaleString()} · Synthetic demo data</div>
+
+        <h4>Executive summary</h4>
+        <p style="font-size:13.5px;line-height:1.6;">Coal production ${pctChange>=0?'increased':'decreased'} by ${Math.abs(pctChange)}% between ${first.year} and ${last.year}, reaching ${last.production} MT against a ${last.target} MT target.${conflict?` One unresolved data conflict was identified for ${conflict.metric} in ${conflict.year} and is flagged below.`:''}</p>
+
+        <h4>Key metrics</h4>
+        <table>
+          <tr><th>Year</th>${metrics.map(m=>`<th>${MINEX_DATA.metricMeta[m].label}</th>`).join("")}</tr>
+          ${rows.map(r=>`<tr><td>${r.year}</td>${metrics.map(m=>`<td>${r[m]} ${MINEX_DATA.metricMeta[m].unit}</td>`).join("")}</tr>`).join("")}
+        </table>
+
+        <h4>Key findings</h4>
+        <p style="font-size:13.5px;">Highest production year: ${rows.reduce((a,b)=>b.production>a.production?b:a).year}. Average safety compliance: ${(rows.reduce((s,r)=>s+r.safety,0)/rows.length).toFixed(1)}%.</p>
+
+        ${includeConflicts ? `<h4>Data conflicts</h4><p style="font-size:13.5px;">${conflict ? `${conflict.metric} (${conflict.year}): ${conflict.sourceA.doc} reports ${conflict.sourceA.value} ${conflict.sourceA.unit} vs. ${conflict.sourceB.doc} at ${conflict.sourceB.value} ${conflict.sourceB.unit}. Status: ${state.conflictStatus[conflict.id]==='unresolved' ? 'Unresolved — pending human review.' : 'Resolved.'}` : 'No conflicts detected in the selected range.'}</p>` : ""}
+
+        ${includeSources ? `<h4>Source references</h4><p style="font-size:13.5px;">${years.map(y=>minexFindSourceDoc(metrics[0],y).name+" ("+y+")").join(", ")}</p>` : ""}
+
+        <div class="report-preview-actions">
+          <button class="btn" id="regenBtn">Regenerate</button>
+          <button class="btn btn-primary" id="saveVersionBtn">Save version</button>
+          <button class="btn" id="exportBtn">Export / Download</button>
+        </div>
+      </div>`;
+    $("#reportPreviewWrap").innerHTML = html;
+    $("#regenBtn").addEventListener("click", generateReport);
+    $("#exportBtn").addEventListener("click", ()=>toast("Export would produce a PDF/DOCX in a full build — prototype preview only."));
+    $("#saveVersionBtn").addEventListener("click", ()=>{
+      state.reportVersions.push({
+        n: state.reportVersions.length+1, years:[first.year,last.year], metrics:[...metrics],
+        includeConflicts, created: new Date().toLocaleString(), by: state.user?.name || "User"
+      });
+      renderVersions();
+      toast("Version saved.");
+    });
+  }
+
+  function renderVersions(){
+    if(!state.reportVersions.length){
+      $("#reportVersionsWrap").innerHTML = `<div class="empty-state">No versions saved yet. Generate a report and save a version.</div>`;
+      return;
+    }
+    $("#reportVersionsWrap").innerHTML = state.reportVersions.slice().reverse().map((v,idx)=>{
+      const prev = state.reportVersions[state.reportVersions.length-2-idx];
+      let diff = "Initial version.";
+      if(prev){
+        const parts = [];
+        if(prev.years[0]!==v.years[0] || prev.years[1]!==v.years[1]) parts.push(`year range changed to ${v.years[0]}–${v.years[1]}`);
+        if(JSON.stringify(prev.metrics)!==JSON.stringify(v.metrics)) parts.push(`metrics changed to ${v.metrics.join(", ")}`);
+        if(prev.includeConflicts!==v.includeConflicts) parts.push(`conflicts section ${v.includeConflicts?'added':'removed'}`);
+        diff = parts.length ? "Changed: " + parts.join("; ") + "." : "No structural changes from previous version.";
+      }
+      return `<div class="version-item">
+        <div><b>Version ${v.n}</b><div class="vmeta">${v.created} · by ${v.by} · ${diff}</div></div>
+        <button class="link-btn" data-view-version="${v.n}">View</button>
+      </div>`;
+    }).join("");
+    $$("[data-view-version]").forEach(btn=>btn.addEventListener("click", ()=>toast(`Version ${btn.dataset.viewVersion} preview would open here in a full build.`)));
+  }
+
+  /* ============================================================
+     BOOT
+     ============================================================ */
+  document.addEventListener("DOMContentLoaded", ()=>{
+    initAuth();
+    initChrome();
   });
-});
+
+})();

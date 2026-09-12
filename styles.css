@@ -247,7 +247,7 @@ button{font-family:inherit;cursor:pointer;}
 .section-head h2{font-size:18px;}
 .section-head p{margin:4px 0 0 0;color:var(--ink-soft);font-size:13.5px;}
 
-/* ---------- Coming soon (unbuilt modules) ---------- */
+/* ---------- Coming soon (legacy, unused once modules are built) ---------- */
 .coming-soon{
   background:var(--panel);
   border:1px solid var(--line);
@@ -309,8 +309,8 @@ button{font-family:inherit;cursor:pointer;}
 .step.done .step-state{color:var(--verified);font-weight:600;}
 
 /* ---------- Search ---------- */
-.search-box{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:12px;display:flex;gap:8px;align-items:center;}
-.search-box input{flex:1;min-width:0;border:none;outline:none;font-size:14.5px;background:transparent;color:var(--ink);}
+.search-box{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:12px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;}
+.search-box input{flex:1;min-width:160px;border:none;outline:none;font-size:14.5px;background:transparent;color:var(--ink);}
 .search-box input::placeholder{color:#A79A83;}
 .filter-row{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px;}
 .chip{border:1px solid var(--line);background:var(--panel);border-radius:999px;padding:5px 11px;font-size:12.5px;color:var(--ink-soft);}
@@ -409,3 +409,94 @@ button{font-family:inherit;cursor:pointer;}
 @media(min-width:520px){
   .drawer-facts{grid-template-columns:repeat(3,1fr);}
 }
+
+/* ============================================================
+   COMMAND CENTER + shared card grid
+   ============================================================ */
+.cc-grid{display:grid;grid-template-columns:1fr;gap:12px;margin-top:6px;}
+@media(min-width:520px){ .cc-grid{grid-template-columns:1fr 1fr;} }
+
+.cc-card{
+  background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);
+  padding:16px;cursor:pointer;text-align:left;display:flex;flex-direction:column;gap:8px;
+}
+.cc-card:hover{border-color:var(--ore);}
+.cc-card-top{display:flex;justify-content:space-between;align-items:flex-start;gap:8px;}
+.cc-card-num{font-size:11px;color:var(--ink-soft);font-weight:700;letter-spacing:0.04em;}
+.cc-card-title{font-size:15px;font-weight:700;margin-top:2px;}
+.cc-card-desc{font-size:12.5px;color:var(--ink-soft);line-height:1.5;}
+.cc-card-kpi{font-size:20px;font-weight:700;color:var(--ore-deep);font-family:Georgia,serif;}
+.cc-card-kpi-label{font-size:11px;color:var(--ink-soft);}
+.cc-card-status{font-size:11px;font-weight:600;padding:2px 8px;border-radius:999px;align-self:flex-start;}
+
+/* summary tile used in Data Trust Center */
+.stat-tile{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:14px;text-align:center;}
+.stat-tile b{display:block;font-size:22px;font-family:Georgia,serif;margin-bottom:2px;}
+.stat-tile span{font-size:11.5px;color:var(--ink-soft);}
+.stat-tile.verified b{color:var(--verified);}
+.stat-tile.review b{color:var(--review);}
+.stat-tile.flagged b{color:var(--flag);}
+
+/* ============================================================
+   MINING INTELLIGENCE
+   ============================================================ */
+.mi-recent{margin-top:12px;}
+.answer-card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:16px;margin-top:16px;}
+.answer-q{font-size:13px;color:var(--ink-soft);margin-bottom:10px;}
+.answer-section{margin-top:14px;}
+.answer-label{font-size:11px;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;color:var(--ore-deep);margin-bottom:6px;}
+.answer-text{font-size:14.5px;line-height:1.6;}
+.key-figures{display:flex;flex-wrap:wrap;gap:10px;}
+.key-figure{background:var(--ore-wash);border-radius:6px;padding:8px 12px;text-align:center;min-width:84px;}
+.key-figure b{display:block;font-size:16px;font-family:Georgia,serif;color:var(--ore-deep);}
+.key-figure span{font-size:10.5px;color:var(--ink-soft);}
+.source-item{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--line);font-size:13px;gap:8px;flex-wrap:wrap;}
+.source-item:last-child{border-bottom:none;}
+.confidence-pill{display:inline-block;font-size:11.5px;font-weight:600;padding:3px 9px;border-radius:999px;}
+.confidence-pill.high{background:var(--verified-wash);color:var(--verified);}
+.confidence-pill.medium{background:var(--review-wash);color:var(--review);}
+.confidence-pill.low{background:var(--flag-wash);color:var(--flag);}
+.needs-review-banner{background:var(--flag-wash);color:var(--flag);border-radius:6px;padding:10px 12px;font-size:13px;font-weight:600;margin-top:10px;}
+
+/* ============================================================
+   DATA TRUST CENTER
+   ============================================================ */
+.conflict-card{background:var(--panel);border:1px solid var(--flag);border-radius:var(--radius);padding:16px;margin-top:12px;}
+.conflict-badge{display:inline-block;background:var(--flag-wash);color:var(--flag);font-size:11px;font-weight:700;padding:3px 9px;border-radius:999px;letter-spacing:0.04em;text-transform:uppercase;margin-bottom:10px;}
+.conflict-sources{display:grid;grid-template-columns:1fr;gap:10px;margin:12px 0;}
+@media(min-width:520px){ .conflict-sources{grid-template-columns:1fr 1fr;} }
+.conflict-source{background:var(--paper);border:1px solid var(--line);border-radius:6px;padding:10px 12px;}
+.conflict-source b{font-size:13px;}
+.conflict-source .val{font-size:19px;font-family:Georgia,serif;color:var(--ore-deep);margin-top:4px;}
+.conflict-source .meta{font-size:11.5px;color:var(--ink-soft);margin-top:2px;}
+.conflict-diff{font-size:12.5px;color:var(--ink-soft);margin-bottom:10px;}
+.conflict-actions{display:flex;gap:8px;flex-wrap:wrap;}
+.conflict-actions .btn{flex:1;min-width:130px;}
+.conflict-resolved{font-size:13px;font-weight:600;color:var(--verified);margin-top:10px;padding:8px 10px;background:var(--verified-wash);border-radius:6px;}
+.conflict-footer{font-size:11.5px;color:var(--ink-soft);margin-top:12px;padding-top:10px;border-top:1px solid var(--line);}
+
+/* ============================================================
+   HISTORICAL INTELLIGENCE
+   ============================================================ */
+.hi-field{display:flex;flex-direction:column;gap:4px;font-size:11.5px;font-weight:600;color:var(--ink-soft);}
+.hi-field select{border:1px solid var(--line);border-radius:6px;padding:6px 8px;font-size:13px;background:var(--panel);color:var(--ink);}
+.chart-card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:14px;margin-top:14px;}
+.hist-row{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:12px 14px;margin-top:8px;display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;}
+.hist-row .yr{font-weight:700;font-size:14px;width:52px;}
+.hist-row .v{font-size:14px;font-family:Georgia,serif;color:var(--ore-deep);flex:1;}
+.hist-row .src{font-size:11.5px;color:var(--ink-soft);}
+
+/* ============================================================
+   AI REPORT STUDIO
+   ============================================================ */
+.report-builder{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:16px;}
+.report-preview{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:18px;margin-top:16px;}
+.report-preview h3{font-size:16px;margin-bottom:4px;}
+.report-preview .rp-sub{font-size:12px;color:var(--ink-soft);margin-bottom:14px;}
+.report-preview h4{font-size:12.5px;text-transform:uppercase;letter-spacing:0.05em;color:var(--ore-deep);margin:16px 0 8px 0;}
+.report-preview table{width:100%;border-collapse:collapse;font-size:12.5px;}
+.report-preview th,.report-preview td{text-align:left;padding:6px 8px;border-bottom:1px solid var(--line);}
+.report-preview-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:16px;}
+.version-item{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:12px 14px;margin-top:8px;display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;}
+.version-item b{font-size:13.5px;}
+.version-item .vmeta{font-size:11.5px;color:var(--ink-soft);}
